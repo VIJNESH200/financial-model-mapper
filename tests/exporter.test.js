@@ -176,6 +176,33 @@ console.log('--- Testing exporter.js ---');
       mappedBy: 'analyst',
       mappedAt: '2025-01-01',
     },
+    {
+      templateId: 'a',
+      sheet: 'sheet_a',
+      normLabel: 'bc',
+      parameterId: 'param',
+      rowLabel: 'BC',
+      mappedBy: 'analyst',
+      mappedAt: '2025-01-01',
+    },
+    {
+      templateId: 'a',
+      sheet: 'sheet_1',
+      normLabel: 'foo_bar',
+      parameterId: 'baz',
+      rowLabel: 'Foo',
+      mappedBy: 'analyst',
+      mappedAt: '2025-01-01',
+    },
+    {
+      templateId: 'a',
+      sheet: '',
+      normLabel: 'test',
+      parameterId: 'p',
+      rowLabel: 'Test',
+      mappedBy: 'analyst',
+      mappedAt: '2025-01-01',
+    },
   ];
   const collisionMappings = [
     {
@@ -185,14 +212,54 @@ console.log('--- Testing exporter.js ---');
       parameterId: 'y',
       source: 'manual',
     },
+    {
+      sheet: 'sheet_ab',
+      rawLabel: 'C',
+      normLabel: 'c',
+      parameterId: 'param',
+      source: 'manual',
+    },
+    {
+      sheet: 'sheet_1',
+      rawLabel: 'Foo',
+      normLabel: 'foo',
+      parameterId: 'bar_baz',
+      source: 'manual',
+    },
+    {
+      sheet: 'test',
+      rawLabel: 'Empty Sheet Shift',
+      normLabel: '',
+      parameterId: 'p',
+      source: 'manual',
+    },
   ];
   const collisionCsv = buildUpdatedHistoryCsv(collisionHistory, collisionMappings, {
     templateId: 'a',
   });
   const collisionRows = parseCsvRows(collisionCsv);
   assert(
-    collisionRows.length === 3,
-    'Does not falsely deduplicate when boundary characters shift across fields (template ab / sheet c vs template a / sheet bc)'
+    collisionRows.length === 9,
+    'Does not falsely deduplicate when boundary characters shift across fields (all 4 field boundary permutations)'
+  );
+
+  // Verify history export does not drop rows that have no source property
+  const noSourceMappings = [
+    {
+      sheet: 'IS',
+      rawLabel: 'No Source Row',
+      normLabel: 'no source row',
+      parameterId: 'operating_expenses',
+      // source is deliberately omitted / undefined
+    },
+  ];
+  const noSourceCsv = buildUpdatedHistoryCsv([], noSourceMappings, {
+    templateId: 'tpl_nosrc',
+  });
+  const noSourceRows = parseCsvRows(noSourceCsv);
+  assert(
+    noSourceRows.length === 2 && noSourceRows[1][4] === 'operating_expenses',
+    'History export includes rows with no source property'
   );
 }
 
