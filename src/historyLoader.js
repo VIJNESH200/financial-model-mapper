@@ -104,12 +104,10 @@ function validateHistoryHeader(headerRow) {
  * Builds an internal history record from CSV tokens.
  * @param {string[]} row CSV row cells.
  * @param {Map<string, number>} columnMap Column name to index map.
- * @param {number} optionalRowIndex Index of row_index column if present.
- * @param {Map<string, number>} sheetSequence Occurrence sequence tracker.
  * @param {Object} [normalisationOptions] Options for normalisation.
  * @return {Object|null} Built record or null if invalid.
  */
-function buildHistoryRecord(row, columnMap, optionalRowIndex, sheetSequence, normalisationOptions) {
+function buildHistoryRecord(row, columnMap, normalisationOptions) {
   const templateId = (row[columnMap.get('template_id')] || '').trim();
   const sheet = (row[columnMap.get('sheet')] || '').trim();
   const rowLabel = (row[columnMap.get('row_label')] || '').trim();
@@ -125,18 +123,6 @@ function buildHistoryRecord(row, columnMap, optionalRowIndex, sheetSequence, nor
     normLabel = normaliseLabel(rowLabel, normalisationOptions);
   }
 
-  const key = `${templateId}::${sheet}`;
-  const sequence = (sheetSequence.get(key) || 0) + 1;
-  sheetSequence.set(key, sequence);
-
-  let explicitIndex = null;
-  if (optionalRowIndex !== -1 && row[optionalRowIndex]) {
-    const parsedNum = parseInt(row[optionalRowIndex].trim(), 10);
-    if (!Number.isNaN(parsedNum)) {
-      explicitIndex = parsedNum;
-    }
-  }
-
   return {
     templateId,
     sheet,
@@ -145,7 +131,6 @@ function buildHistoryRecord(row, columnMap, optionalRowIndex, sheetSequence, nor
     parameterId,
     mappedBy,
     mappedAt,
-    rowIndex: explicitIndex !== null ? explicitIndex : sequence,
   };
 }
 
@@ -167,23 +152,19 @@ export function parseHistoryCsv(csvText, normalisationOptions) {
   }
 
   const { columnMap } = headerValidation;
-  const optionalRowIndex = rows[0].map(h => h.trim().toLowerCase()).indexOf('row_index');
   const records = [];
   const errors = [];
-  const sheetSequence = new Map();
 
-  for (let rowIndex = 1; rowIndex < rows.length; rowIndex += 1) {
+  for (let lineIndex = 1; lineIndex < rows.length; lineIndex += 1) {
     const record = buildHistoryRecord(
-      rows[rowIndex],
+      rows[lineIndex],
       columnMap,
-      optionalRowIndex,
-      sheetSequence,
       normalisationOptions
     );
     if (record) {
       records.push(record);
     } else {
-      errors.push(`Row ${rowIndex + 1}: Skipped record due to missing row_label or parameter_id.`);
+      errors.push(`Row ${lineIndex + 1}: Skipped record due to missing row_label or parameter_id.`);
     }
   }
 

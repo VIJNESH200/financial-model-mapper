@@ -70,6 +70,10 @@
             <input type="file" id="history-file-input" accept=".csv">
             <span id="history-status" class="form-hint">Loading bundled history...</span>
           </div>
+          <div class="form-group">
+            <label for="template-id-input">Template ID (optional)</label>
+            <input type="text" id="template-id-input" placeholder="e.g. tpl_tech_standard">
+          </div>
           <div class="button-row">
             <button type="button" id="btn-reset-history" class="btn-sm">Reset to Default</button>
           </div>
@@ -135,8 +139,14 @@
         </div>
       </div>
       <div class="export-actions">
-        <button type="button" id="btn-export-mapping" class="btn-primary">Export Mapping CSV</button>
-        <button type="button" id="btn-export-history">Export Updated History CSV</button>
+        <div class="export-action-item">
+          <button type="button" id="btn-export-mapping" class="btn-primary">Export Mapping CSV</button>
+          <span class="form-hint">Exports mappings for all mapped sheets</span>
+        </div>
+        <div class="export-action-item">
+          <button type="button" id="btn-export-history">Export Updated History CSV</button>
+          <span class="form-hint">Appends new accepted mappings to the history file, skipping duplicates</span>
+        </div>
       </div>
     </section>
   </div>

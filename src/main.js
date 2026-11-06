@@ -30,7 +30,7 @@ const state = {
     },
     matching: {
       useSheetContext: true,
-      usePositionTiebreaker: true,
+      usePositionTiebreaker: false,
       minimumConfidence: 'low',
     },
   },
@@ -112,15 +112,28 @@ function updateConfigHints() {
 }
 
 /**
- * Runs matching engine on all rows across cached sheets and updates UI.
+ * Assembles the standard matching context including the active template ID.
+ * @return {Object} Context object for matchRow.
  */
-function rematchAllSheets() {
-  const matchingContext = {
+function getMatchingContext() {
+  const templateInput = /** @type {HTMLInputElement|null} */ (
+    document.getElementById('template-id-input')
+  );
+  const templateId = templateInput?.value.trim() || null;
+  return {
     history: state.activeHistory,
     taxonomy: state.activeTaxonomy,
     aliasLookup: state.aliasLookup,
     settings: state.settings.matching,
+    templateId,
   };
+}
+
+/**
+ * Runs matching engine on all rows across cached sheets and updates UI.
+ */
+function rematchAllSheets() {
+  const matchingContext = getMatchingContext();
 
   for (const sheetRows of state.sheetRowsMap.values()) {
     sheetRows.forEach(item => {
@@ -185,7 +198,7 @@ function handleAssignParameter(rowIndex, parameterId) {
   } else {
     target.assignedParameterId = parameterId;
     target.source = 'manual';
-    target.confidence = 'high';
+    target.confidence = null;
   }
   refreshTableView();
 }
@@ -230,12 +243,7 @@ async function loadSheet(sheetName) {
       onProgress: percent => updateFileProgress(percent, `Parsing rows... ${percent}%`),
     });
 
-    const matchingContext = {
-      history: state.activeHistory,
-      taxonomy: state.activeTaxonomy,
-      aliasLookup: state.aliasLookup,
-      settings: state.settings.matching,
-    };
+    const matchingContext = getMatchingContext();
 
     const sheetRows = rawRows.map(row => ({
       ...row,
@@ -382,12 +390,28 @@ function wireUploadListeners() {
 
   document.getElementById('history-file-input')?.addEventListener('change', handleHistoryUpload);
 
+  document.getElementById('template-id-input')?.addEventListener('input', () => {
+    rematchAllSheets();
+  });
+
   document.getElementById('btn-reset-history')?.addEventListener('click', () => {
     state.activeHistory = state.defaultHistory;
     updateConfigHints();
     rematchAllSheets();
     showBannerMessage('Reset to bundled default history.', 'info');
   });
+}
+
+/**
+ * Combines all rows across all mapped sheets in state.sheetRowsMap.
+ * @return {Array<Object>} Combined row state objects.
+ */
+function getAllMappedRows() {
+  const combined = [];
+  for (const sheetRows of state.sheetRowsMap.values()) {
+    combined.push(...sheetRows);
+  }
+  return combined.length > 0 ? combined : state.rows;
 }
 
 /**
@@ -430,8 +454,9 @@ function wireWorkspaceListeners() {
  */
 function wireExportListeners() {
   document.getElementById('btn-export-mapping')?.addEventListener('click', () => {
+    const allRows = getAllMappedRows();
     const mappingCsv = buildMappingCsv(
-      state.rows.map(r => ({
+      allRows.map(r => ({
         sheet: r.sheet,
         rowIndex: r.rowIndex,
         rawLabel: r.rawLabel,
@@ -442,7 +467,8 @@ function wireExportListeners() {
       })),
       state.modelFileName
     );
-    const exportName = `${state.modelFileName || 'model'}_${state.currentSheet || 'sheet'}_mapping.csv`;
+    const sheetPart = state.sheetRowsMap.size > 1 ? 'all_sheets' : (state.currentSheet || 'sheet');
+    const exportName = `${state.modelFileName || 'model'}_${sheetPart}_mapping.csv`;
     triggerCsvDownload(exportName, mappingCsv);
     showBannerMessage(`Exported mapping CSV: ${exportName}`, 'success');
   });
@@ -453,13 +479,15 @@ function wireExportListeners() {
     const templateId = tplInput?.value.trim() || 'user_model';
     const mappedBy = mappedByInput?.value.trim() || 'analyst';
 
+    const allRows = getAllMappedRows();
     const updatedHistoryCsv = buildUpdatedHistoryCsv(
       state.activeHistory,
-      state.rows.map(r => ({
+      allRows.map(r => ({
         sheet: r.sheet,
         rawLabel: r.rawLabel,
         normLabel: r.normLabel,
         parameterId: r.assignedParameterId,
+        source: r.source,
       })),
       { templateId, mappedBy }
     );

@@ -118,6 +118,24 @@ function formatCategoryLabel(slug) {
 }
 
 /**
+ * Escapes special HTML characters in a string to prevent markup injection.
+ * Converts &, <, >, ", and ' to their respective HTML entities.
+ * @param {unknown} value Value to escape.
+ * @return {string} Escaped HTML entity string.
+ */
+export function escapeHtml(value) {
+  if (value === null || value === undefined) {
+    return '';
+  }
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+/**
  * Generates options HTML for the parameter assignment dropdown.
  * @param {Object} taxonomy Validated taxonomy object.
  * @param {string|null} selectedId Currently assigned parameter id.
@@ -128,10 +146,13 @@ export function buildParameterOptionsHtml(taxonomy, selectedId) {
   const groups = groupTaxonomyByCategory(taxonomy);
 
   for (const [category, params] of groups.entries()) {
-    html += `<optgroup label="${formatCategoryLabel(category)}">`;
+    const escapedCategory = escapeHtml(formatCategoryLabel(category));
+    html += `<optgroup label="${escapedCategory}">`;
     for (const param of params) {
       const isSelected = param.id === selectedId ? ' selected' : '';
-      html += `<option value="${param.id}"${isSelected}>${param.displayName}</option>`;
+      const escapedId = escapeHtml(param.id);
+      const escapedDisplayName = escapeHtml(param.displayName);
+      html += `<option value="${escapedId}"${isSelected}>${escapedDisplayName}</option>`;
     }
     html += '</optgroup>';
   }
@@ -150,21 +171,26 @@ function renderSuggestionCell(suggestion, taxonomy) {
     return '<span class="badge badge-none">None</span>';
   }
 
-  const badgeClass = `badge badge-${suggestion.confidence}`;
+  const escapedConfidence = escapeHtml(suggestion.confidence);
+  const escapedSource = escapeHtml(suggestion.source);
+  const escapedParameterId = escapeHtml(suggestion.parameterId);
+  const badgeClass = `badge badge-${escapedConfidence}`;
+
   let conflictBadge = '';
   if (suggestion.hasConflict) {
     conflictBadge = '<span class="badge badge-conflict" title="Multiple historical mappings exist">Conflict</span>';
   }
 
   const param = taxonomy?.parameters?.find(p => p.id === suggestion.parameterId);
-  const name = param ? param.displayName : suggestion.parameterId;
-  const desc = `Source: ${suggestion.source}`;
+  const displayName = param ? param.displayName : suggestion.parameterId;
+  const escapedDisplayName = escapeHtml(displayName);
+  const desc = `Source: ${escapedSource}`;
 
   return `
     <div>
-      <span class="${badgeClass}">${suggestion.confidence}</span>
+      <span class="${badgeClass}">${escapedConfidence}</span>
       ${conflictBadge}
-      <span style="font-weight: 500; margin-left: 6px;">${name}</span>
+      <span style="font-weight: 500; margin-left: 6px;" data-param-id="${escapedParameterId}">${escapedDisplayName}</span>
       <div class="suggestion-desc">${desc}</div>
     </div>
   `;
@@ -190,17 +216,6 @@ function matchesFilter(item, filter) {
 }
 
 /**
- * Renders table body rows based on current state and active filter.
- * Attaches event listeners for accepting suggestions and changing assignments.
- * @param {Array<Object>} rows Array of row states.
- * @param {Object} taxonomy Active taxonomy.
- * @param {string} activeFilter Filter value ('all', 'unmapped', etc.).
- * @param {Object} callbacks Event callbacks for user actions.
- * @param {function(number): void} callbacks.onAccept Callback when suggestion is accepted.
- * @param {function(number, string): void} callbacks.onAssign Callback when dropdown changes.
- * @param {function(number): void} callbacks.onClear Callback when mapping is cleared.
- */
-/**
  * Creates the action cell with Accept or Clear buttons.
  * @param {Object} item Row state object.
  * @param {Object} callbacks User action callbacks.
@@ -210,7 +225,7 @@ function createActionCell(item, callbacks) {
   const tdAction = document.createElement('td');
   tdAction.className = 'col-action';
 
-  if (item.suggestion?.parameterId && item.assignedParameterId !== item.suggestion.parameterId) {
+  if (!item.assignedParameterId && item.suggestion?.parameterId) {
     const btnAccept = document.createElement('button');
     btnAccept.type = 'button';
     btnAccept.className = 'btn-sm btn-primary';

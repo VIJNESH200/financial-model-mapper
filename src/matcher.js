@@ -24,41 +24,26 @@ function compareRecentDates(dateA, dateB) {
 }
 
 /**
- * Finds matching history records for a row based on sheet and normalised label.
+ * Finds matching history records for a row based on sheet, normalised label, and active template.
  * @param {Object} row Internal row object.
  * @param {Array<Object>} history List of internal history records.
  * @param {boolean} useSheetContext Whether matching requires matching the sheet name.
+ * @param {string|null} [templateId] Optional active template ID to scope matches to.
  * @return {Array<Object>} Matching history records sorted by most recent first.
  */
-function findHistoryLabelMatches(row, history, useSheetContext) {
+function findHistoryLabelMatches(row, history, useSheetContext, templateId = null) {
   const rowSheet = (row.sheet || '').trim().toLowerCase();
+  const targetTemplate = templateId ? templateId.trim() : null;
   const matches = history.filter(record => {
+    if (targetTemplate && record.templateId !== targetTemplate) {
+      return false;
+    }
     const labelMatch = record.normLabel === row.normLabel;
     if (!labelMatch) {
       return false;
     }
     const recordSheet = (record.sheet || '').trim().toLowerCase();
     return useSheetContext ? recordSheet === rowSheet : true;
-  });
-
-  return matches.sort((a, b) => compareRecentDates(a.mappedAt, b.mappedAt));
-}
-
-/**
- * Finds history records that match the row's sheet and position with a differing label.
- * @param {Object} row Internal row object.
- * @param {Array<Object>} history List of internal history records.
- * @return {Array<Object>} Position-matched records sorted by most recent first.
- */
-function findPositionMatches(row, history) {
-  // TODO: History CSV specification lacks explicit row_index; matching relies on
-  // explicit or sequential rowIndex recorded during history parsing.
-  const rowSheet = (row.sheet || '').trim().toLowerCase();
-  const matches = history.filter(record => {
-    const recordSheet = (record.sheet || '').trim().toLowerCase();
-    const positionMatch = recordSheet === rowSheet && record.rowIndex === row.rowIndex;
-    const labelDiffers = record.normLabel !== row.normLabel;
-    return positionMatch && labelDiffers;
   });
 
   return matches.sort((a, b) => compareRecentDates(a.mappedAt, b.mappedAt));
@@ -80,10 +65,11 @@ function detectConflicts(records) {
  * @param {Object} row Model row.
  * @param {Array<Object>} history History records.
  * @param {boolean} useSheet Whether to match sheet name.
+ * @param {string|null} [templateId] Optional active template ID.
  * @return {Object|null} Suggestion or null if no match.
  */
-function tryHistoryMatch(row, history, useSheet) {
-  const matches = findHistoryLabelMatches(row, history, useSheet);
+function tryHistoryMatch(row, history, useSheet, templateId = null) {
+  const matches = findHistoryLabelMatches(row, history, useSheet, templateId);
   if (matches.length === 0) {
     return null;
   }
@@ -123,29 +109,6 @@ function tryTaxonomyMatch(row, aliasLookup) {
 }
 
 /**
- * Attempts to resolve suggestion from sheet position tiebreaker.
- * @param {Object} row Model row.
- * @param {Array<Object>} history History records.
- * @return {Object|null} Suggestion or null if no match.
- */
-function tryPositionMatch(row, history) {
-  const matches = findPositionMatches(row, history);
-  if (matches.length === 0) {
-    return null;
-  }
-  const winner = matches[0];
-  const { hasConflict, conflicts } = detectConflicts(matches);
-  return {
-    parameterId: winner.parameterId,
-    confidence: 'low',
-    source: 'position',
-    hasConflict,
-    conflicts,
-    matchedRecord: winner,
-  };
-}
-
-/**
  * Suggests a standardised parameter mapping for a single row.
  * Pure function with no DOM dependencies.
  * @param {Object} row The model row { sheet, rowIndex, rawLabel, normLabel }.
@@ -154,6 +117,7 @@ function tryPositionMatch(row, history) {
  * @param {Object} [context.taxonomy] Standardised parameter taxonomy.
  * @param {Map<string, Object[]>} [context.aliasLookup] Pre-indexed alias lookup map.
  * @param {Object} [context.settings] Matching settings.
+ * @param {string|null} [context.templateId] Optional active template identifier to scope history matches.
  * @return {Object} Suggestion result with parameterId, confidence, source, and conflict status.
  */
 export function matchRow(row, context = {}) {
@@ -161,24 +125,21 @@ export function matchRow(row, context = {}) {
     history = [],
     taxonomy = null,
     settings = {},
+    templateId = null,
     aliasLookup = taxonomy ? buildAliasLookup(taxonomy, settings.normalisation) : new Map(),
   } = context;
 
   const useSheet = settings.useSheetContext !== false;
-  const usePosition = settings.usePositionTiebreaker === true;
   const minConfidence = settings.minimumConfidence || 'low';
   const minRank = CONFIDENCE_LEVELS[minConfidence] ?? CONFIDENCE_LEVELS.low;
 
-  // 1. History sheet + label match -> 2. Taxonomy alias match -> 3. Position tiebreaker
-  let suggestion = tryHistoryMatch(row, history, useSheet);
+  // 1. History sheet + label match -> 2. Taxonomy alias match
+  let suggestion = tryHistoryMatch(row, history, useSheet, templateId);
   if (!suggestion) {
     suggestion = tryTaxonomyMatch(row, aliasLookup);
   }
-  if (!suggestion && usePosition) {
-    suggestion = tryPositionMatch(row, history);
-  }
 
-  // 4. No match or confidence below threshold
+  // No match or confidence below threshold
   const currentRank = suggestion ? (CONFIDENCE_LEVELS[suggestion.confidence] ?? 0) : 0;
   if (!suggestion || currentRank < minRank) {
     return {
@@ -192,19 +153,4 @@ export function matchRow(row, context = {}) {
   }
 
   return suggestion;
-}
-
-/**
- * Matches a list of model rows against history and taxonomy.
- * @param {Array<Object>} rows Array of model rows.
- * @param {Object} context Matching context.
- * @return {Array<Object>} Array of suggestion objects matching the input rows.
- */
-export function matchRows(rows, context = {}) {
-  const normalisationOpts = context.settings?.normalisation;
-  const aliasLookup = context.aliasLookup ||
-    (context.taxonomy ? buildAliasLookup(context.taxonomy, normalisationOpts) : new Map());
-  const resolvedContext = { ...context, aliasLookup };
-
-  return rows.map(row => matchRow(row, resolvedContext));
 }

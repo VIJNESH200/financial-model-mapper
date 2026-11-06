@@ -5,9 +5,6 @@
 import { normaliseLabel } from './normalise.js';
 
 /**
- * Validates a taxonomy data structure.
- * @param {unknown} data The object to validate.
-/**
  * Validates an individual taxonomy parameter entry.
  * @param {unknown} param The parameter entry to validate.
  * @param {number} index Index in parameters array.
@@ -87,24 +84,6 @@ export function parseTaxonomyJson(jsonString) {
     const message = error instanceof Error ? error.message : String(error);
     return { taxonomy: null, errors: [`JSON parse error: ${message}`] };
   }
-}
-
-/**
- * Fetches and validates a taxonomy JSON file from a URL.
- * @param {string} url Resource URL to fetch.
- * @return {Promise<Object>} Resolves to the parsed taxonomy.
- */
-export async function loadTaxonomyFromUrl(url) {
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`Failed to load taxonomy from ${url}: HTTP ${response.status}`);
-  }
-  const text = await response.text();
-  const { taxonomy, errors } = parseTaxonomyJson(text);
-  if (!taxonomy) {
-    throw new Error(`Invalid taxonomy at ${url}:\n${errors.join('\n')}`);
-  }
-  return taxonomy;
 }
 
 /**

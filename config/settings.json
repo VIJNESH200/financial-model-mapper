@@ -7,7 +7,7 @@
   },
   "matching": {
     "useSheetContext": true,
-    "usePositionTiebreaker": true,
+    "usePositionTiebreaker": false,
     "minimumConfidence": "low"
   }
 }

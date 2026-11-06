@@ -50,8 +50,8 @@ tpl_1,IS,Cost of Goods Sold,,cogs,analyst1,2025-01-01T00:01:00Z`;
   assert(records.length === 2, 'Parsed 2 records');
   assert(records[0].rowLabel === 'Net Sales, Gross', 'Parsed quoted row_label');
   assert(records[1].normLabel === 'cost of goods sold', 'Auto-computes normLabel when empty in CSV');
-  assert(records[0].rowIndex === 1, 'Assigned sequential rowIndex 1');
-  assert(records[1].rowIndex === 2, 'Assigned sequential rowIndex 2');
+  assert(records[0].rowIndex === undefined, 'History record does not have rowIndex');
+  assert(records[1].rowIndex === undefined, 'History record does not have rowIndex');
 }
 
 console.log('--- Testing taxonomy.js ---');

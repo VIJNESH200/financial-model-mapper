@@ -30,16 +30,6 @@ export function getSheetNames(arrayBuffer, xlsxInstance = globalThis.XLSX) {
  * @param {Object} xlsxInstance SheetJS library instance.
  * @return {string|null} Raw label string, or null if row has no textual label.
  */
-/**
- * Finds the primary row label from cells in an Excel row.
- * Scans columns from left to right and selects the first non-empty text value.
- * @param {Object} worksheet SheetJS worksheet object.
- * @param {number} rowZeroIndexed 0-based row index.
- * @param {number} startCol 0-based starting column index.
- * @param {number} endCol 0-based ending column index.
- * @param {Object} xlsxInstance SheetJS library instance.
- * @return {string|null} Raw label string, or null if row has no textual label.
- */
 function extractRowLabel(worksheet, rowZeroIndexed, startCol, endCol, xlsxInstance) {
   let fallbackLabel = null;
 
