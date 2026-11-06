@@ -1,0 +1,418 @@
+/**
+ * Financial Model Mapper - Application Stylesheet
+ * System font stack, clean grid layout, high-contrast accessible components.
+ */
+
+:root {
+  --color-bg: #f8fafc;
+  --color-surface: #ffffff;
+  --color-border: #cbd5e1;
+  --color-border-subtle: #e2e8f0;
+  --color-text: #0f172a;
+  --color-text-muted: #475569;
+  --color-primary: #1e40af;
+  --color-primary-hover: #1d4ed8;
+  --color-primary-light: #eff6ff;
+
+  --color-success: #166534;
+  --color-success-bg: #dcfce7;
+  --color-warning: #854d0e;
+  --color-warning-bg: #fef9c3;
+  --color-danger: #991b1b;
+  --color-danger-bg: #fee2e2;
+  --color-info: #075985;
+  --color-info-bg: #e0f2fe;
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-family);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.app-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 20px;
+}
+
+/* Header */
+.app-header {
+  margin-bottom: 24px;
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: 16px;
+}
+
+.app-header h1 {
+  margin: 0 0 6px 0;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.app-header p {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 14px;
+}
+
+/* Status Notifications */
+.status-banner {
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.status-banner.hidden {
+  display: none;
+}
+
+.status-banner.info {
+  background-color: var(--color-info-bg);
+  color: var(--color-info);
+  border: 1px solid #bae6fd;
+}
+
+.status-banner.success {
+  background-color: var(--color-success-bg);
+  color: var(--color-success);
+  border: 1px solid #bbf7d0;
+}
+
+.status-banner.error {
+  background-color: var(--color-danger-bg);
+  color: var(--color-danger);
+  border: 1px solid #fecaca;
+}
+
+/* Grid Layout for Configuration Cards */
+.config-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.card {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 16px;
+}
+
+.card h2 {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0 0 12px 0;
+  color: var(--color-text);
+  border-bottom: 1px solid var(--color-border-subtle);
+  padding-bottom: 6px;
+}
+
+.card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.form-group label {
+  font-weight: 500;
+  font-size: 13px;
+  color: var(--color-text);
+}
+
+.form-hint {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+/* Controls: Inputs, Selects, Buttons */
+input[type="file"],
+input[type="text"],
+select {
+  font-family: inherit;
+  font-size: 13px;
+  padding: 6px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-surface);
+  color: var(--color-text);
+}
+
+input[type="file"] {
+  padding: 4px;
+}
+
+select:focus,
+input:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+button {
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+button:hover:not(:disabled) {
+  background-color: var(--color-border-subtle);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+button.btn-primary {
+  background-color: var(--color-primary);
+  color: #ffffff;
+  border-color: var(--color-primary);
+}
+
+button.btn-primary:hover:not(:disabled) {
+  background-color: var(--color-primary-hover);
+}
+
+button.btn-sm {
+  padding: 3px 8px;
+  font-size: 12px;
+}
+
+.button-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* Progress Indicator */
+.progress-container {
+  margin-top: 8px;
+}
+
+.progress-container.hidden {
+  display: none;
+}
+
+.progress-bar-bg {
+  width: 100%;
+  height: 8px;
+  background-color: var(--color-border-subtle);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  width: 0%;
+  background-color: var(--color-primary);
+  transition: width 0.1s ease;
+}
+
+.progress-label {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin-top: 4px;
+}
+
+/* Mapping Workspace Section */
+.workspace-panel {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  margin-bottom: 24px;
+}
+
+.workspace-panel.hidden {
+  display: none;
+}
+
+.workspace-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.metrics-summary {
+  display: flex;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.metric-pill {
+  padding: 2px 8px;
+  background-color: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+}
+
+/* Mapping Table */
+.table-wrapper {
+  overflow-x: auto;
+  margin-bottom: 16px;
+}
+
+.mapping-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.mapping-table th,
+.mapping-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--color-border-subtle);
+  vertical-align: middle;
+}
+
+.mapping-table th {
+  background-color: var(--color-bg);
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.mapping-table tr:hover {
+  background-color: #f1f5f9;
+}
+
+.col-index {
+  width: 60px;
+  color: var(--color-text-muted);
+}
+
+.col-label {
+  min-width: 220px;
+  font-weight: 500;
+}
+
+.col-suggestion {
+  min-width: 220px;
+}
+
+.col-assignment {
+  min-width: 260px;
+}
+
+.col-action {
+  width: 120px;
+  text-align: right;
+}
+
+/* Badges */
+.badge {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.badge-high {
+  background-color: var(--color-success-bg);
+  color: var(--color-success);
+}
+
+.badge-medium {
+  background-color: var(--color-info-bg);
+  color: var(--color-info);
+}
+
+.badge-low {
+  background-color: var(--color-warning-bg);
+  color: var(--color-warning);
+}
+
+.badge-none {
+  background-color: #f1f5f9;
+  color: #64748b;
+}
+
+.badge-conflict {
+  background-color: var(--color-danger-bg);
+  color: var(--color-danger);
+  margin-left: 6px;
+}
+
+.suggestion-desc {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}
+
+/* Export Section */
+.export-panel {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 16px;
+}
+
+.export-panel.hidden {
+  display: none;
+}
+
+.export-panel h2 {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0 0 12px 0;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.export-options-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.export-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}

@@ -1,0 +1,13 @@
+{
+  "normalisation": {
+    "lowercase": true,
+    "trimWhitespace": true,
+    "collapseSpaces": true,
+    "stripPunctuation": true
+  },
+  "matching": {
+    "useSheetContext": true,
+    "usePositionTiebreaker": true,
+    "minimumConfidence": "low"
+  }
+}

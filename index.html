@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Financial Model Mapper</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-container">
+    <header class="app-header">
+      <h1>Financial Model Mapper</h1>
+      <p>Standardise row line items in Excel financial models against historical mappings and parameter taxonomies.</p>
+    </header>
+
+    <div id="status-banner" class="status-banner hidden" role="status" aria-live="polite">
+      <span id="status-message"></span>
+      <button id="status-dismiss" class="btn-sm" type="button" aria-label="Dismiss message">Dismiss</button>
+    </div>
+
+    <!-- Configuration & Setup Cards -->
+    <section class="config-grid" aria-label="Configuration and Data Sources">
+      <!-- 1. Excel Model Upload -->
+      <div class="card">
+        <h2>1. Financial Model File</h2>
+        <div class="card-content">
+          <div class="form-group">
+            <label for="model-file-input">Select Excel Workbook (.xlsx, .xlsm)</label>
+            <input type="file" id="model-file-input" accept=".xlsx, .xlsm">
+            <span id="model-file-info" class="form-hint">No file loaded.</span>
+          </div>
+
+          <div id="excel-progress" class="progress-container hidden" role="region" aria-label="Parsing Progress">
+            <div class="progress-bar-bg">
+              <div id="excel-progress-fill" class="progress-bar-fill"></div>
+            </div>
+            <div id="excel-progress-label" class="progress-label">Processing sheet...</div>
+          </div>
+
+          <div class="form-group">
+            <label for="sheet-select">Select Sheet to Map</label>
+            <select id="sheet-select" disabled>
+              <option value="">-- Upload workbook first --</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. Taxonomy Configuration -->
+      <div class="card">
+        <h2>2. Parameter Taxonomy</h2>
+        <div class="card-content">
+          <div class="form-group">
+            <label for="taxonomy-file-input">Replace Taxonomy (.json)</label>
+            <input type="file" id="taxonomy-file-input" accept=".json">
+            <span id="taxonomy-status" class="form-hint">Loading bundled taxonomy...</span>
+          </div>
+          <div class="button-row">
+            <button type="button" id="btn-reset-taxonomy" class="btn-sm">Reset to Default</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. Historical Mappings -->
+      <div class="card">
+        <h2>3. Mapping History</h2>
+        <div class="card-content">
+          <div class="form-group">
+            <label for="history-file-input">Load Custom History (.csv)</label>
+            <input type="file" id="history-file-input" accept=".csv">
+            <span id="history-status" class="form-hint">Loading bundled history...</span>
+          </div>
+          <div class="button-row">
+            <button type="button" id="btn-reset-history" class="btn-sm">Reset to Default</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Mapping Workspace -->
+    <main id="workspace-panel" class="workspace-panel hidden" aria-label="Model Row Mapping Workspace">
+      <div class="workspace-toolbar">
+        <div class="filter-group">
+          <label for="filter-select">Show Rows:</label>
+          <select id="filter-select">
+            <option value="all">All Rows</option>
+            <option value="unmapped">Only Unmapped</option>
+            <option value="low-confidence">Only Low Confidence</option>
+            <option value="conflicts">Only Conflicts</option>
+          </select>
+        </div>
+
+        <div class="metrics-summary">
+          <span class="metric-pill" id="metric-total">Total Rows: 0</span>
+          <span class="metric-pill" id="metric-mapped">Mapped: 0</span>
+          <span class="metric-pill" id="metric-unmapped">Unmapped: 0</span>
+          <span class="metric-pill" id="metric-conflicts">Conflicts: 0</span>
+        </div>
+
+        <div class="button-row">
+          <button type="button" id="btn-accept-high" class="btn-primary btn-sm">Accept All High-Confidence</button>
+          <button type="button" id="btn-clear-all" class="btn-sm">Clear All Mappings</button>
+        </div>
+      </div>
+
+      <div class="table-wrapper">
+        <table class="mapping-table" aria-label="Financial Model Rows">
+          <thead>
+            <tr>
+              <th scope="col" class="col-index">Row #</th>
+              <th scope="col" class="col-label">Line Item Label</th>
+              <th scope="col" class="col-suggestion">Suggestion</th>
+              <th scope="col" class="col-assignment">Assigned Parameter</th>
+              <th scope="col" class="col-action">Action</th>
+            </tr>
+          </thead>
+          <tbody id="mapping-table-body">
+            <!-- Rendered by ui.js -->
+          </tbody>
+        </table>
+      </div>
+    </main>
+
+    <!-- Export Section -->
+    <section id="export-panel" class="export-panel hidden" aria-label="Export Mappings">
+      <h2>4. Export Mappings</h2>
+      <div class="export-options-grid">
+        <div class="form-group">
+          <label for="export-template-id">Template Identifier</label>
+          <input type="text" id="export-template-id" value="model_v1" placeholder="e.g. tpl_retail_standard">
+        </div>
+        <div class="form-group">
+          <label for="export-mapped-by">Analyst Name</label>
+          <input type="text" id="export-mapped-by" value="analyst" placeholder="e.g. jdoe">
+        </div>
+      </div>
+      <div class="export-actions">
+        <button type="button" id="btn-export-mapping" class="btn-primary">Export Mapping CSV</button>
+        <button type="button" id="btn-export-history">Export Updated History CSV</button>
+      </div>
+    </section>
+  </div>
+
+  <!-- Pinned CDN build of SheetJS -->
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <!-- Application Entry Point -->
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,310 @@
+{
+  "version": 1,
+  "parameters": [
+    {
+      "id": "revenue",
+      "displayName": "Revenue",
+      "category": "income_statement",
+      "aliases": [
+        "Net Sales",
+        "Total Revenue",
+        "Sales",
+        "Gross Revenue",
+        "Operating Revenue",
+        "Turnover"
+      ]
+    },
+    {
+      "id": "cogs",
+      "displayName": "Cost of Goods Sold",
+      "category": "income_statement",
+      "aliases": [
+        "Cost of Sales",
+        "COGS",
+        "Cost of Revenue",
+        "Direct Costs"
+      ]
+    },
+    {
+      "id": "gross_profit",
+      "displayName": "Gross Profit",
+      "category": "income_statement",
+      "aliases": [
+        "Gross Margin",
+        "Total Gross Profit"
+      ]
+    },
+    {
+      "id": "opex",
+      "displayName": "Operating Expenses",
+      "category": "income_statement",
+      "aliases": [
+        "OPEX",
+        "Total Operating Expenses",
+        "Operating Costs"
+      ]
+    },
+    {
+      "id": "sga",
+      "displayName": "Selling, General & Administrative",
+      "category": "income_statement",
+      "aliases": [
+        "SG&A",
+        "SGA",
+        "Selling, General and Administrative",
+        "General and Administrative",
+        "G&A"
+      ]
+    },
+    {
+      "id": "rd",
+      "displayName": "Research & Development",
+      "category": "income_statement",
+      "aliases": [
+        "R&D",
+        "RD",
+        "Research and Development"
+      ]
+    },
+    {
+      "id": "ebitda",
+      "displayName": "EBITDA",
+      "category": "income_statement",
+      "aliases": [
+        "Operating Profit Before D&A",
+        "Adjusted EBITDA"
+      ]
+    },
+    {
+      "id": "da",
+      "displayName": "Depreciation & Amortisation",
+      "category": "income_statement",
+      "aliases": [
+        "D&A",
+        "Depreciation and Amortization",
+        "Depreciation",
+        "Amortization"
+      ]
+    },
+    {
+      "id": "ebit",
+      "displayName": "Operating Income (EBIT)",
+      "category": "income_statement",
+      "aliases": [
+        "EBIT",
+        "Operating Income",
+        "Operating Profit"
+      ]
+    },
+    {
+      "id": "interest_expense",
+      "displayName": "Interest Expense",
+      "category": "income_statement",
+      "aliases": [
+        "Net Interest Expense",
+        "Interest",
+        "Finance Costs"
+      ]
+    },
+    {
+      "id": "tax_expense",
+      "displayName": "Income Tax Expense",
+      "category": "income_statement",
+      "aliases": [
+        "Taxes",
+        "Income Taxes",
+        "Tax Provision",
+        "Provision for Income Taxes"
+      ]
+    },
+    {
+      "id": "net_income",
+      "displayName": "Net Income",
+      "category": "income_statement",
+      "aliases": [
+        "Net Profit",
+        "Net Earnings",
+        "Profit After Tax",
+        "Bottom Line"
+      ]
+    },
+    {
+      "id": "cash_and_equivalents",
+      "displayName": "Cash & Cash Equivalents",
+      "category": "balance_sheet",
+      "aliases": [
+        "Cash and Equivalents",
+        "Cash and Cash Equivalents",
+        "Cash",
+        "Cash & Short-Term Investments"
+      ]
+    },
+    {
+      "id": "accounts_receivable",
+      "displayName": "Accounts Receivable",
+      "category": "balance_sheet",
+      "aliases": [
+        "A/R",
+        "Trade Receivables",
+        "Receivables"
+      ]
+    },
+    {
+      "id": "inventory",
+      "displayName": "Inventory",
+      "category": "balance_sheet",
+      "aliases": [
+        "Inventories",
+        "Stock",
+        "Merchandise"
+      ]
+    },
+    {
+      "id": "total_current_assets",
+      "displayName": "Total Current Assets",
+      "category": "balance_sheet",
+      "aliases": [
+        "Current Assets",
+        "Total Current Assets"
+      ]
+    },
+    {
+      "id": "ppe",
+      "displayName": "Property, Plant & Equipment",
+      "category": "balance_sheet",
+      "aliases": [
+        "PP&E",
+        "PPE",
+        "Fixed Assets",
+        "Capital Assets"
+      ]
+    },
+    {
+      "id": "total_assets",
+      "displayName": "Total Assets",
+      "category": "balance_sheet",
+      "aliases": [
+        "Assets",
+        "Total Non-Current and Current Assets"
+      ]
+    },
+    {
+      "id": "accounts_payable",
+      "displayName": "Accounts Payable",
+      "category": "balance_sheet",
+      "aliases": [
+        "A/P",
+        "Trade Payables",
+        "Payables"
+      ]
+    },
+    {
+      "id": "current_debt",
+      "displayName": "Current Portion of Debt",
+      "category": "balance_sheet",
+      "aliases": [
+        "Short-Term Debt",
+        "Current Debt",
+        "Short Term Borrowings"
+      ]
+    },
+    {
+      "id": "total_current_liabilities",
+      "displayName": "Total Current Liabilities",
+      "category": "balance_sheet",
+      "aliases": [
+        "Current Liabilities"
+      ]
+    },
+    {
+      "id": "long_term_debt",
+      "displayName": "Long-Term Debt",
+      "category": "balance_sheet",
+      "aliases": [
+        "LT Debt",
+        "Term Debt",
+        "Non-Current Borrowings",
+        "Senior Debt"
+      ]
+    },
+    {
+      "id": "total_liabilities",
+      "displayName": "Total Liabilities",
+      "category": "balance_sheet",
+      "aliases": [
+        "Liabilities",
+        "Total Debt and Liabilities"
+      ]
+    },
+    {
+      "id": "retained_earnings",
+      "displayName": "Retained Earnings",
+      "category": "balance_sheet",
+      "aliases": [
+        "Accumulated Deficit",
+        "Retained Profit"
+      ]
+    },
+    {
+      "id": "total_equity",
+      "displayName": "Total Shareholders' Equity",
+      "category": "balance_sheet",
+      "aliases": [
+        "Total Equity",
+        "Stockholders' Equity",
+        "Shareholders' Funds"
+      ]
+    },
+    {
+      "id": "cfo",
+      "displayName": "Cash Flow from Operating Activities",
+      "category": "cash_flow",
+      "aliases": [
+        "Operating Cash Flow",
+        "Cash from Operations",
+        "CFO"
+      ]
+    },
+    {
+      "id": "capex",
+      "displayName": "Capital Expenditures",
+      "category": "cash_flow",
+      "aliases": [
+        "CapEx",
+        "Purchase of PP&E",
+        "Additions to PP&E",
+        "Capital Spending"
+      ]
+    },
+    {
+      "id": "cfi",
+      "displayName": "Cash Flow from Investing Activities",
+      "category": "cash_flow",
+      "aliases": [
+        "Investing Cash Flow",
+        "Cash from Investing",
+        "CFI"
+      ]
+    },
+    {
+      "id": "cff",
+      "displayName": "Cash Flow from Financing Activities",
+      "category": "cash_flow",
+      "aliases": [
+        "Financing Cash Flow",
+        "Cash from Financing",
+        "CFF"
+      ]
+    },
+    {
+      "id": "net_change_in_cash",
+      "displayName": "Net Change in Cash",
+      "category": "cash_flow",
+      "aliases": [
+        "Net Increase in Cash",
+        "Net Decrease in Cash",
+        "Change in Cash"
+      ]
+    }
+  ]
+}

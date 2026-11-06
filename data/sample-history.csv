@@ -1,0 +1,21 @@
+template_id,sheet,row_label,normalized_label,parameter_id,mapped_by,mapped_at
+tpl_tech_standard,IS,Net Sales,net sales,revenue,analyst1,2025-01-10T09:00:00Z
+tpl_tech_standard,IS,Cost of Goods Sold,cost of goods sold,cogs,analyst1,2025-01-10T09:01:00Z
+tpl_tech_standard,IS,Gross Profit,gross profit,gross_profit,analyst1,2025-01-10T09:02:00Z
+tpl_tech_standard,IS,Operating Expenses,operating expenses,opex,analyst1,2025-01-10T09:03:00Z
+tpl_tech_standard,IS,EBITDA,ebitda,ebitda,analyst1,2025-01-10T09:04:00Z
+tpl_tech_standard,IS,Operating Income,operating income,ebit,analyst1,2025-01-10T09:05:00Z
+tpl_tech_standard,IS,Net Income,net income,net_income,analyst1,2025-01-10T09:06:00Z
+tpl_tech_standard,BS,Cash and Cash Equivalents,cash and cash equivalents,cash_and_equivalents,analyst2,2025-01-10T09:10:00Z
+tpl_tech_standard,BS,Accounts Receivable,accounts receivable,accounts_receivable,analyst2,2025-01-10T09:11:00Z
+tpl_tech_standard,BS,Inventories,inventories,inventory,analyst2,2025-01-10T09:12:00Z
+tpl_tech_standard,BS,Total Current Assets,total current assets,total_current_assets,analyst2,2025-01-10T09:13:00Z
+tpl_tech_standard,BS,Property Plant and Equipment,property plant and equipment,ppe,analyst2,2025-01-10T09:14:00Z
+tpl_tech_standard,BS,Total Assets,total assets,total_assets,analyst2,2025-01-10T09:15:00Z
+tpl_tech_standard,CF,Cash from Operations,cash from operations,cfo,analyst3,2025-01-10T09:20:00Z
+tpl_tech_standard,CF,Capital Expenditures,capital expenditures,capex,analyst3,2025-01-10T09:21:00Z
+tpl_tech_standard,CF,Cash from Investing,cash from investing,cfi,analyst3,2025-01-10T09:22:00Z
+tpl_tech_standard,CF,Cash from Financing,cash from financing,cff,analyst3,2025-01-10T09:23:00Z
+tpl_retail_legacy,IS,Turnover,turnover,revenue,analyst1,2025-02-01T14:00:00Z
+tpl_retail_legacy,IS,Cost of Sales,cost of sales,cogs,analyst1,2025-02-01T14:05:00Z
+tpl_retail_legacy,IS,Administrative Expenses,administrative expenses,sga,analyst1,2025-02-01T14:10:00Z
