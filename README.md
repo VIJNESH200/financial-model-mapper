@@ -103,7 +103,6 @@ Defines normalisation flags and matching behaviour:
   },
   "matching": {
     "useSheetContext": true,
-    "usePositionTiebreaker": true,
     "minimumConfidence": "low"
   }
 }
@@ -149,3 +148,4 @@ node tests/exporter.test.js
 1. Keep dependencies zeroed: use vanilla JavaScript and native web APIs.
 2. Follow the Google JavaScript Style Guide (2 spaces, `const`/`let`, semicolons, named exports).
 3. Ensure all unit tests pass before submitting changes.
+4. Note on module exports: `escapeCsvField` (`src/exporter.js`) and `parseCsvRows` (`src/historyLoader.js`) are internal helpers exported specifically to facilitate isolated unit testing.

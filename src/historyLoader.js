@@ -84,7 +84,7 @@ function validateHistoryHeader(headerRow) {
   const columnMap = new Map();
   const normalized = headerRow.map(h => h.trim().toLowerCase());
 
-  EXPECTED_COLUMNS.forEach((col, idx) => {
+  EXPECTED_COLUMNS.forEach(col => {
     columnMap.set(col, normalized.indexOf(col));
   });
 

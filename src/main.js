@@ -30,7 +30,6 @@ const state = {
     },
     matching: {
       useSheetContext: true,
-      usePositionTiebreaker: false,
       minimumConfidence: 'low',
     },
   },

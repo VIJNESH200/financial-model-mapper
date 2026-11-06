@@ -164,6 +164,36 @@ console.log('--- Testing exporter.js ---');
   });
   const rowsWhitespace = parseCsvRows(csvWhitespace);
   assert(rowsWhitespace.length === rows.length, 'Deduplicates when casing or whitespace differs');
+
+  // Verify deduplication does not collide when boundaries shift across fields
+  const collisionHistory = [
+    {
+      templateId: 'ab',
+      sheet: 'c',
+      normLabel: 'x',
+      parameterId: 'y',
+      rowLabel: 'X',
+      mappedBy: 'analyst',
+      mappedAt: '2025-01-01',
+    },
+  ];
+  const collisionMappings = [
+    {
+      sheet: 'bc',
+      rawLabel: 'X',
+      normLabel: 'x',
+      parameterId: 'y',
+      source: 'manual',
+    },
+  ];
+  const collisionCsv = buildUpdatedHistoryCsv(collisionHistory, collisionMappings, {
+    templateId: 'a',
+  });
+  const collisionRows = parseCsvRows(collisionCsv);
+  assert(
+    collisionRows.length === 3,
+    'Does not falsely deduplicate when boundary characters shift across fields (template ab / sheet c vs template a / sheet bc)'
+  );
 }
 
 console.log(`\nTests finished: ${passed} passed, ${failed} failed.`);

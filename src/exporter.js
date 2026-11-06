@@ -80,7 +80,8 @@ export function buildMappingCsv(mappings, modelFileName = '') {
 
 /**
  * Computes the unique deduplication key for a history entry:
- * templateId + sheet + normLabel + parameterId normalised to lowercase and trimmed.
+ * templateId + sheet + normLabel + parameterId normalised to lowercase and trimmed,
+ * delimited by the non-printable \u0001 character to prevent boundary collision.
  * @param {string} templateId Template identifier.
  * @param {string} sheet Sheet name.
  * @param {string} normLabel Normalised line item label.
@@ -89,13 +90,13 @@ export function buildMappingCsv(mappings, modelFileName = '') {
  */
 function buildHistoryKey(templateId, sheet, normLabel, parameterId) {
   const norm = str => String(str ?? '').trim().toLowerCase();
-  return `${norm(templateId)}${norm(sheet)}${norm(normLabel)}${norm(parameterId)}`;
+  return [templateId, sheet, normLabel, parameterId].map(norm).join('\u0001');
 }
 
 /**
  * Builds updated history CSV content by appending newly accepted mappings.
  * Prevents duplicate mappings by maintaining a Set of composite keys
- * (templateId + sheet + normLabel + parameterId, lowercased and trimmed) across existing
+ * (templateId + sheet + normLabel + parameterId joined by \u0001, lowercased and trimmed) across existing
  * and newly appended records, and skips mappings whose source is already 'history'.
  * @param {Array<Object>} existingRecords Existing history records.
  * @param {Array<Object>} newMappings Newly accepted mappings.
