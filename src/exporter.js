@@ -88,9 +88,8 @@ export function buildMappingCsv(mappings, modelFileName = '') {
  * @return {string} Normalised composite deduplication key.
  */
 function buildHistoryKey(templateId, sheet, normLabel, parameterId) {
-  return `${templateId || ''}${sheet || ''}${normLabel || ''}${parameterId || ''}`
-    .trim()
-    .toLowerCase();
+  const norm = str => String(str ?? '').trim().toLowerCase();
+  return `${norm(templateId)}${norm(sheet)}${norm(normLabel)}${norm(parameterId)}`;
 }
 
 /**

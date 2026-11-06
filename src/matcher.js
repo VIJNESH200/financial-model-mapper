@@ -33,10 +33,13 @@ function compareRecentDates(dateA, dateB) {
  */
 function findHistoryLabelMatches(row, history, useSheetContext, templateId = null) {
   const rowSheet = (row.sheet || '').trim().toLowerCase();
-  const targetTemplate = templateId ? templateId.trim() : null;
+  const targetTemplate = templateId && templateId.trim() ? templateId.trim() : null;
   const matches = history.filter(record => {
-    if (targetTemplate && record.templateId !== targetTemplate) {
-      return false;
+    if (targetTemplate) {
+      const recordTemplate = (record.templateId || '').trim();
+      if (recordTemplate !== targetTemplate) {
+        return false;
+      }
     }
     const labelMatch = record.normLabel === row.normLabel;
     if (!labelMatch) {

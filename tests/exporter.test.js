@@ -149,6 +149,21 @@ console.log('--- Testing exporter.js ---');
   });
   const rows2 = parseCsvRows(csv2);
   assert(rows2.length === rows.length, 'Second export with no changes adds no new lines');
+
+  // Verify deduplication handles casing and trimming
+  const csvWhitespace = buildUpdatedHistoryCsv(parsedRecords, [
+    {
+      sheet: ' is ',
+      rawLabel: 'New Label',
+      normLabel: 'new label',
+      parameterId: 'COGS',
+      source: 'manual',
+    },
+  ], {
+    templateId: ' tpl_1 ',
+  });
+  const rowsWhitespace = parseCsvRows(csvWhitespace);
+  assert(rowsWhitespace.length === rows.length, 'Deduplicates when casing or whitespace differs');
 }
 
 console.log(`\nTests finished: ${passed} passed, ${failed} failed.`);

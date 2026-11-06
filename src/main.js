@@ -390,7 +390,11 @@ function wireUploadListeners() {
 
   document.getElementById('history-file-input')?.addEventListener('change', handleHistoryUpload);
 
-  document.getElementById('template-id-input')?.addEventListener('input', () => {
+  const templateIdInput = document.getElementById('template-id-input');
+  templateIdInput?.addEventListener('input', () => {
+    rematchAllSheets();
+  });
+  templateIdInput?.addEventListener('change', () => {
     rematchAllSheets();
   });
 
