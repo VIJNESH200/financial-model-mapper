@@ -7,9 +7,9 @@ A browser-based tool that assists financial analysts in standardising line-item 
 - **Client-side execution**: Static HTML/CSS/ES modules. Runs in any modern browser without a backend or server database.
 - **Selective Sheet Parsing**: Reads workbook metadata using SheetJS and parses only the sheet selected by the user.
 - **Multi-tiered Matching Engine**:
-  1. Historical mapping match (Sheet + Normalised Label) -> High confidence.
+  1. Historical mapping match (Sheet + Normalised Label, with optional Template scoping) -> High confidence.
   2. Taxonomy alias exact match (Normalised) -> Medium confidence.
-  3. Row position tiebreaker on matching sheet -> Low confidence.
+  3. Conflict tracking when differing historical mappings or taxonomy aliases exist.
 - **Conflict Tracking**: Identifies when multiple historical mappings or taxonomy aliases exist for a single label.
 - **Review and Override**: Review suggestions, accept with one click, select alternatives from a categorized dropdown, or leave items unmapped.
 - **CSV Export**: Export final model row mappings and optionally export an updated history CSV with accepted mappings appended.
