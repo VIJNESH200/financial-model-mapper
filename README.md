@@ -4,14 +4,14 @@ A browser-based tool that assists financial analysts in standardizing line-item 
 
 ## Features
 
-- **Client-side execution**: Static HTML/CSS/ES modules. Runs in any modern browser without a backend server. Excel parsing is powered by SheetJS (pinned to v0.20.3 from the official SheetJS CDN).
+- **Client-Side Execution**: Static HTML/CSS/ES modules. Runs in any modern browser without a backend server. Excel parsing uses SheetJS (pinned to v0.20.3 from the official SheetJS CDN; can be vendored locally for air-gapped environments).
 - **Selective Sheet Parsing**: Reads workbook metadata using SheetJS and parses only the sheet selected by the user.
-- **Multi-tiered Matching Engine**:
-  1. **Historical Mapping Match**: Matches on Sheet + Normalized Label (scoped to Template ID if specified in the UI) -> High confidence (`source: 'history'`). If multiple records match, the most recent `mapped_at` timestamp is preferred.
-  2. **Taxonomy Exact Match**: Matches on target parameter `displayName` or alias list (Normalized) -> Medium confidence (`source: 'taxonomy'`).
+- **Multi-Tiered Matching Engine**:
+  1. **Historical Mapping Match**: Matches on Sheet + Normalized Label (exclusively scoped to Template ID if specified in the UI) — High confidence (`source: 'history'`). If multiple records match, the most recent `mapped_at` timestamp is preferred.
+  2. **Taxonomy Exact Match**: Matches on target parameter `displayName` or alias list (Normalized) — Medium confidence (`source: 'taxonomy'`).
   3. **No Match**: When no candidate is found or confidence is below the configured threshold, the row remains unmapped (`source: 'none'`).
-- **Conflict Tracking**: Detects and flags when multiple historical records map to conflicting parameter IDs, or when a label matches multiple taxonomy parameters.
-- **Review and Override**: Review suggestions, accept suggestions, select alternatives from a categorized dropdown, or leave items unmapped.
+- **Conflict Tracking**: Detects and flags when multiple historical records map to conflicting parameter IDs, or when a label matches multiple taxonomy parameters, highlighting affected rows with a conflict indicator.
+- **Review and Override**: Review suggestions, accept suggestions individually or in bulk, select alternatives from a categorized dropdown, or clear mappings.
 - **CSV Export**: Export final model row mappings and optionally export an updated history CSV with newly accepted mappings appended.
 
 ## Quick Start
@@ -90,8 +90,8 @@ The bundled taxonomy provides standard 3-statement US GAAP / IFRS parameters, bu
    }
    ```
 2. **Category Grouping**: The `category` slug controls the `<optgroup>` labels in the manual assignment dropdown (e.g., `saas_metrics` displays as `Saas Metrics`).
-3. **Alias Coverage**: Add company-specific and client-specific abbreviations to `aliases`. The engine normalizes both `displayName` and all `aliases`, enabling zero-configuration matching when analysts encounter varied naming conventions.
-4. **Ad-Hoc UI Uploads**: If analysts work across multiple distinct taxonomies (e.g. standard GAAP vs. custom management reporting), they can upload custom `.json` files on the fly via the **"Replace Taxonomy (.json)"** button without changing code.
+3. **Alias Coverage**: Add company-specific and client-specific abbreviations to `aliases`. The engine normalizes both `displayName` and all `aliases`, enabling automated matching when analysts encounter varied naming conventions.
+4. **Ad-Hoc UI Uploads**: If analysts work across multiple distinct taxonomies (e.g., standard GAAP vs. custom management reporting), they can upload custom `.json` files via the **"Replace Taxonomy (.json)"** file input without changing code.
 
 ### 2. Seeding Historical Mappings (`data/sample-history.csv`)
 
@@ -104,12 +104,13 @@ Historical matching is the highest-confidence matching tier (`confidence: 'high'
    pe_standard,BS,Cash & Equivalents,,cash_and_equivalents,associate,2025-02-01T12:00:00Z
    ```
 2. **Leave `normalized_label` Blank**: If omitted, the engine automatically computes the normalized label on ingest using the active normalization settings.
-3. **Template Scoping**: Use `template_id` to separate distinct modeling conventions. When an analyst enters a template ID (e.g., `saas_model_v1`) into the UI's **Template ID** input, the engine scopes history matches to that template first, preventing conflicts between divergent client models.
-4. **Tie-Breaking**: If multiple historical records match the same sheet and label, the engine prefers the record with the most recent `mapped_at` timestamp.
+3. **Sheet Name Matching**: Sheet names match case-insensitively (e.g., `IS`, `BS`, `CF` in history match workbook tabs named `IS`, `is`, or `Is`).
+4. **Template Scoping**: Use `template_id` to separate distinct modeling conventions. When an analyst enters a template ID (e.g., `saas_model_v1`) into the UI's **Template ID** input (Card 3: Mapping History), the engine exclusively scopes history matches to records matching that template ID, filtering out records from divergent client models.
+5. **Tie-Breaking**: If multiple historical records match the same sheet and label, the engine prefers the record with the most recent `mapped_at` timestamp.
 
 ### 3. Tuning Matching & Normalization Rules (`config/settings.json`)
 
-Adjust matching behavior in `config/settings.json` to suit your models:
+Adjust matching behavior in `config/settings.json` prior to running the application to suit your models:
 
 ```json
 {
@@ -127,56 +128,56 @@ Adjust matching behavior in `config/settings.json` to suit your models:
 ```
 
 - **`matching.useSheetContext`**:
-  - `true` (default): Line items match historical records only if they appear on the same sheet (e.g. `IS` vs `BS`). Recommended when identical labels appear on multiple sheets (such as `"Depreciation"` on both Income Statement and Cash Flow).
+  - `true` (default): Line items match historical records only if they appear on the same sheet (e.g., `IS` vs `BS`). Recommended when identical labels appear on multiple sheets (such as `"Depreciation"` on both Income Statement and Cash Flow).
   - `false`: Matches historical records across any sheet regardless of sheet name.
 - **`matching.minimumConfidence`**:
-  - `'low'` (default): Accepts all matches (`high` from history, `medium` from taxonomy).
-  - `'medium'`: Suppresses low-confidence results, returning only medium and high matches.
-  - `'high'`: Displays only historical matches; taxonomy aliases are marked as unmapped (`source: 'none'`).
+  - `'low'` (default): Accepts all matched suggestions (high from history, medium from taxonomy).
+  - `'medium'`: Accepts medium and high matches (identical to `'low'` in the two-tier engine).
+  - `'high'`: Accepts only historical matches; taxonomy alias matches are suppressed to unmapped (`source: 'none'`).
 
-### 4. Deployment Strategies (Zero Infrastructure)
+### 4. Deployment Strategies (Client-Side Architecture)
 
-Because Financial Model Mapper is built with 100% static HTML, CSS, and vanilla ES modules, it requires zero backend servers, databases, or container infrastructure:
+Because Financial Model Mapper is built with static HTML, CSS, and vanilla ES modules, it requires no backend servers, databases, or container infrastructure:
 
-* **Local Analyst Workstation**:
-  * Clone the repository and run `python -m http.server 8000` or `npx serve .`.
-  * Open `http://localhost:8000`.
-* **Internal Corporate Intranet / Cloud Storage**:
-  * Upload the repository folder to any static hosting service: an internal AWS S3 bucket with CloudFront, Google Cloud Storage, Azure Blob Storage, or an internal NGINX server.
-  * *Security Guarantee*: All Excel parsing and mapping logic runs 100% client-side inside the analyst's browser tab. Model data and confidential financials are never uploaded to any external server.
-* **GitHub Pages**:
-  * Enable GitHub Pages in repository settings pointing to the `main` branch root. Team members can immediately access the tool via a web URL.
+- **Local Analyst Workstation**:
+  - Clone the repository and run `python -m http.server 8000` or `npx serve .`.
+  - Open `http://localhost:8000`.
+- **Internal Corporate Intranet / Cloud Storage**:
+  - Upload the repository folder to any static hosting environment: internal AWS S3 bucket with CloudFront, Google Cloud Storage, Azure Blob Storage, or an internal NGINX server.
+  - **Client-Side Data Privacy**: All Excel parsing and mapping operations execute entirely within the client's web browser tab. No model data or financial information is transmitted to external servers.
+- **Offline / Air-Gapped Environments**:
+  - By default, `index.html` loads SheetJS from `https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js`.
+  - For disconnected or air-gapped corporate environments, download `xlsx.full.min.js` to a local `vendor/` directory and update the `<script src="...">` tag in `index.html` to reference the local file.
+- **GitHub Pages**:
+  - Enable GitHub Pages in repository settings pointing to the `main` branch root. Team members can immediately access the tool via a web URL.
 
-### 5. Daily Analyst Workflow & Continuous Learning Loop
-
-The tool is designed as a continuous learning loop that grows smarter over time:
+### 5. Daily Analyst Workflow & History Accumulation
 
 1. **Step 1: Open & Ingest**: Navigate to the tool. Default taxonomy and historical mappings load automatically into memory.
-2. **Step 2: Upload Financial Model**: Select the client or company Excel workbook (`.xlsx`, `.xlsm`). Choose the statement tab (`IS`, `BS`, `CF`).
-3. **Step 3: One-Click High-Confidence Acceptance**: Click **"Accept All High-Confidence"** to instantly map recognized historical lines.
+2. **Step 2: Upload Financial Model & Select Sheet**: Select the client or company Excel workbook (`.xlsx`, `.xlsm`). Choose the statement tab (e.g., `IS`). When switching between sheets (`IS`, `BS`, `CF`), previously reviewed decisions are preserved in session memory (`state.sheetRowsMap`).
+3. **Step 3: Accept High-Confidence Suggestions**: Click **"Accept All High-Confidence"** to map recognized historical lines on the active sheet tab. If any rows have conflicting historical mappings, the engine suggests the most recent record; analysts can inspect conflicts via the **"Conflicts"** filter before accepting suggestions.
 4. **Step 4: Review & Override**: Filter by **"Only Unmapped"** to review remaining items. Assign parameters from the categorized dropdown or leave non-pertinent items unmapped.
-5. **Step 5: Export Mappings**: Click **"Export Mapping CSV"** to generate `mapping_export.csv` containing final line item mappings for downstream data systems.
-6. **Step 6: Expand Knowledge Base**: Click **"Export Updated History CSV"**. The tool merges all accepted mappings from the session, sanitizes formula characters (CWE-1236), deduplicates against existing records, and exports `updated_history.csv`.
-7. **Step 7: Commit Updated History**: Replace `data/sample-history.csv` with the exported file in git. Future models processed by any team member will now automatically match those lines with high confidence.
+5. **Step 5: Export Mappings**: Click **"Export Mapping CSV"** to generate `<model_filename>_<sheet>_mapping.csv` (or `<model_filename>_all_sheets_mapping.csv` if multiple sheets were reviewed in the session) containing final line item mappings for downstream data systems.
+6. **Step 6: Export Updated History**: In Section 4 of the UI ("Export Decisions"), specify the **Template Identifier** (used to tag newly exported records) and **Analyst Name**, then click **"Export Updated History CSV"**. The tool combines accepted mappings from all reviewed sheets, applies formula injection mitigation (CWE-1236), deduplicates against existing records, and exports `updated_history.csv`.
+7. **Step 7: Commit Updated History**: Replace `data/sample-history.csv` with the exported file in git. Future sessions will now automatically recognize those mappings with high confidence.
 
-### 6. Downstream Data Integration (Python / Pandas / SQL)
+### 6. Downstream Data Integration (Python / pandas)
 
-The exported mapping CSV (`model_file, sheet, row_index, row_label, parameter_id, source, confidence`) interfaces cleanly with data extraction pipelines. Example Python snippet to apply mappings to financial data:
+The exported mapping CSV (`model_file, sheet, row_index, row_label, parameter_id, source, confidence`) interfaces directly with pandas and ETL data pipelines. Example Python snippet to apply mappings to financial data:
 
 ```python
 import pandas as pd
 
 # 1. Load exported mappings and raw model figures
-mappings = pd.read_csv('mapping_export.csv')
-raw_model = pd.read_excel('model.xlsx', sheet_name='IS')
+# Note: header=None preserves 1-based Excel row indexing (DataFrame index + 1 == Excel row index)
+mappings = pd.read_csv('sample_financial_model.xlsx_IS_mapping.csv')
+raw_model = pd.read_excel('sample_financial_model.xlsx', sheet_name='IS', header=None)
 
-# 2. Join parameter IDs by 1-based row index
-mapped_model = raw_model.merge(
-    mappings[['row_index', 'parameter_id', 'source']],
-    left_index=True,
-    right_on='row_index',
-    how='left'
-)
+# 2. Filter mappings to target sheet and construct matching 1-based row index
+is_mappings = mappings[mappings['sheet'] == 'IS'][['row_index', 'parameter_id', 'source']]
+raw_model['row_index'] = raw_model.index + 1
+
+mapped_model = raw_model.merge(is_mappings, on='row_index', how='left')
 
 # 3. Aggregate into standardized reporting metrics
 clean_financials = mapped_model.dropna(subset=['parameter_id'])
@@ -191,8 +192,8 @@ print(standardized_summary)
 The tool parses standard Excel workbooks in the browser:
 - **Supported extensions**: `.xlsx`, `.xlsm`.
 - **Sheet selection**: Workbook metadata is read first (`bookSheets: true`); only the selected sheet is parsed.
-- **Row label extraction**: Scans columns from left to right and selects the first non-empty cell containing textual characters (`/\p{L}/u`), ignoring purely numerical values or standalone years. Formula error cells (`#REF!`, `#VALUE!`, `#N/A`, `#NAME?`) are explicitly ignored.
-- **Column scanning bounds**: Labels are read from the first column of the sheet’s used range, checking up to 26 columns to the right. Text placed further right is ignored.
+- **Row label extraction**: Scans columns from left to right and selects the first non-empty cell containing textual characters (`/\p{L}/u`, matching Unicode letter characters in any language), ignoring purely numerical values or standalone years. Formula error cells (`#REF!`, `#VALUE!`, `#N/A`, `#NAME?`) are explicitly ignored.
+- **Column scanning bounds**: Labels are read from the first column of the sheet's used range, checking up to 26 columns to the right. Text placed further right is ignored.
 - **Performance**: Skips fully empty rows early and yields to the UI thread in 250-row chunks with progress reporting.
 
 ### 2. Taxonomy JSON (`config/taxonomy.json`)
@@ -252,23 +253,23 @@ Defines normalization flags and matching behavior:
 
 ### 4. History CSV Header (`data/sample-history.csv`)
 
-History files must adhere to this exact column header:
+History files adhere to RFC 4180 CSV formatting with the following columns:
 
 ```csv
 template_id,sheet,row_label,normalized_label,parameter_id,mapped_by,mapped_at
 ```
 
-- `template_id`: Template or model identifier (used by UI Template ID scoping).
-- `sheet`: Sheet name (e.g., `IS`, `BS`, `CF`).
-- `row_label`: Raw line item label.
-- `normalized_label`: Normalized string (automatically computed if blank).
-- `parameter_id`: Target parameter ID matching the taxonomy.
-- `mapped_by`: Analyst identifier.
-- `mapped_at`: ISO 8601 timestamp string (newest record breaks ties).
+- `template_id` (string): Template or model identifier (used by UI Template ID scoping).
+- `sheet` (string): Sheet name (e.g., `IS`, `BS`, `CF`).
+- `row_label` (string): Raw line item label.
+- `normalized_label` (string): Normalized string (automatically computed if blank).
+- `parameter_id` (string): Target parameter ID matching the taxonomy.
+- `mapped_by` (string): Analyst identifier.
+- `mapped_at` (string): ISO 8601 timestamp string (newest record breaks ties).
 
 ### 5. Mapping Export CSV Header
 
-When exporting mappings, the downloaded CSV contains:
+When exporting mappings, the downloaded CSV contains the following 7 columns:
 
 ```csv
 model_file,sheet,row_index,row_label,parameter_id,source,confidence
@@ -279,15 +280,18 @@ model_file,sheet,row_index,row_label,parameter_id,source,confidence
 - `row_index` (integer): 1-based row index in the Excel sheet.
 - `row_label` (string): Extracted raw line item label.
 - `parameter_id` (string): Assigned taxonomy parameter identifier (blank if unmapped).
-- `source` (enum): Origin of assignment (`'history'`, `'taxonomy'`, `'manual'`, or `'none'`).
-- `confidence` (enum/string): Confidence score (`'high'`, `'medium'`, or blank if unmapped/manual).
-- **Formula Sanitization (CWE-1236)**: Exported label text starting with =, +, -, @, or a tab gets a leading apostrophe so spreadsheet apps don’t run it as a formula. The apostrophe stays in the row_label column. normalized_label removes it, so matching is unaffected.
+- `source` (string): Origin of assignment (`'history'`, `'taxonomy'`, `'manual'`, or `'none'`).
+- `confidence` (string): Confidence score (`'high'`, `'medium'`, or blank if unmapped/manual).
+
+#### Formula Injection Mitigation (CWE-1236)
+
+Exported label text starting with formula trigger characters (`=`, `+`, `-`, `@`, `\t`, `\r`) is prefixed with a leading apostrophe (`'`) to prevent spreadsheet applications from interpreting untrusted cell content as executable formulas (CWE-1236). The apostrophe is preserved in the `row_label` column of the mapping export; when re-ingested for history matching, label normalization (`normaliseLabel`) strips punctuation including leading apostrophes, so future matching is unaffected.
 
 ### 6. Updated History CSV Export (`updated_history.csv`)
 
 Exporting updated history appends newly accepted row mappings to the active history:
 - **Session Scope**: Exports combine all sheets reviewed in the current session (`state.sheetRowsMap`).
-- **De-duplication**: Prevents duplicates by checking existing keys using `templateId + sheet + normLabel + parameterId` delimited by `\u0001` (lowercased and trimmed).
+- **Deduplication**: Prevents duplicates by checking existing composite keys using `templateId + sheet + normLabel + parameterId` delimited by `\u0001` (lowercased and trimmed; `\u0001` is a non-printable ASCII control character that prevents collision between adjacent fields).
 - **Formula Sanitization**: Applied identically to exported history records using the leading apostrophe (`'`) convention for formula triggers.
 - **Source Filter**: Mappings already sourced from `history` are skipped; only new assignments (`taxonomy`, `manual`, or external) are appended.
 - **Metadata**: Records are tagged with the Template Identifier and Analyst Name entered in the export panel, with `mapped_at` set to the current ISO 8601 timestamp.
@@ -305,7 +309,7 @@ node tests/exporter.test.js
 
 ## Contributing
 
-1. Keep dependencies zeroed: use vanilla JavaScript and native web APIs.
+1. Zero runtime dependencies: use vanilla JavaScript and native web APIs.
 2. Follow the Google JavaScript Style Guide (2 spaces, `const`/`let`, semicolons, named exports).
 3. Ensure all unit tests pass before submitting changes.
 4. Note on module exports: `escapeCsvField` (`src/exporter.js`) and `parseCsvRows` (`src/historyLoader.js`) are internal helpers exported specifically to facilitate isolated unit testing.
