@@ -28,18 +28,11 @@ function commitRow(rows, currentRow, lastField) {
 }
 
 /**
- * Parses raw CSV text into a 2D array of trimmed string tokens.
- * Handles quoted cells, escaped quotes (""), and commas or newlines inside quotes.
- * @param {string} csvText Raw CSV string.
- * @return {string[][]} Array of row token arrays.
+ * Scans CSV character stream into token rows.
+ * @param {string} text Sanitized CSV text.
+ * @param {string[][]} rows Destination rows array.
  */
-export function parseCsvRows(csvText) {
-  if (!csvText) {
-    return [];
-  }
-
-  const text = csvText.startsWith('\uFEFF') ? csvText.slice(1) : csvText;
-  const rows = [];
+function scanCsvTokens(text, rows) {
   let currentRow = [];
   let currentField = '';
   let insideQuotes = false;
@@ -71,7 +64,21 @@ export function parseCsvRows(csvText) {
   if (currentField !== '' || currentRow.length > 0) {
     commitRow(rows, currentRow, currentField);
   }
+}
 
+/**
+ * Parses raw CSV text into a 2D array of trimmed string tokens.
+ * Handles quoted cells, escaped quotes (""), and commas or newlines inside quotes.
+ * @param {string} csvText Raw CSV string.
+ * @return {string[][]} Array of row token arrays.
+ */
+export function parseCsvRows(csvText) {
+  if (!csvText) {
+    return [];
+  }
+  const text = csvText.startsWith('\uFEFF') ? csvText.slice(1) : csvText;
+  const rows = [];
+  scanCsvTokens(text, rows);
   return rows;
 }
 

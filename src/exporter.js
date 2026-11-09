@@ -36,7 +36,7 @@ export function escapeCsvField(value) {
     return '';
   }
   let str = String(value);
-  if (str.length > 0 && FORMULA_TRIGGERS.includes(str[0])) {
+  if (typeof value === 'string' && str.length > 0 && FORMULA_TRIGGERS.includes(str[0])) {
     str = `'${str}`;
   }
   if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
@@ -100,6 +100,38 @@ function buildHistoryKey(templateId, sheet, normLabel, parameterId) {
 }
 
 /**
+ * Appends new non-history mappings to history CSV rows, avoiding duplicates.
+ * @param {Array<Object>} newMappings Newly accepted mappings.
+ * @param {Set<string>} existingKeys Keys of existing history entries.
+ * @param {Object} meta Metadata for new records.
+ * @param {string[][]} rows Array of CSV rows to append to.
+ */
+function appendNewMappings(newMappings, existingKeys, meta, rows) {
+  newMappings
+    .filter(mapping => Boolean(mapping.parameterId) && mapping.source !== 'history')
+    .forEach(mapping => {
+      const key = buildHistoryKey(
+        meta.templateId,
+        mapping.sheet,
+        mapping.normLabel,
+        mapping.parameterId
+      );
+      if (!existingKeys.has(key)) {
+        existingKeys.add(key);
+        rows.push([
+          meta.templateId,
+          mapping.sheet ?? '',
+          mapping.rawLabel ?? '',
+          mapping.normLabel ?? '',
+          mapping.parameterId,
+          meta.mappedBy,
+          meta.mappedAt,
+        ]);
+      }
+    });
+}
+
+/**
  * Builds updated history CSV content by appending newly accepted mappings.
  * Prevents duplicate mappings by maintaining a Set of composite keys
  * (templateId + sheet + normLabel + parameterId joined by \u0001, lowercased and trimmed) across existing
@@ -113,14 +145,15 @@ function buildHistoryKey(templateId, sheet, normLabel, parameterId) {
  * @return {string} Full history CSV content.
  */
 export function buildUpdatedHistoryCsv(existingRecords = [], newMappings = [], options = {}) {
-  const mappedBy = options.mappedBy || 'analyst';
-  const mappedAt = options.mappedAt || new Date().toISOString();
-  const templateId = options.templateId || 'imported_model';
+  const meta = {
+    mappedBy: options.mappedBy || 'analyst',
+    mappedAt: options.mappedAt || new Date().toISOString(),
+    templateId: options.templateId || 'imported_model',
+  };
 
   const rows = [HISTORY_CSV_HEADER];
   const existingKeys = new Set();
 
-  // Include existing history records first and record their keys for deduplication
   existingRecords.forEach(record => {
     existingKeys.add(
       buildHistoryKey(
@@ -141,30 +174,7 @@ export function buildUpdatedHistoryCsv(existingRecords = [], newMappings = [], o
     ]);
   });
 
-  // Append new mappings that have an assigned parameter and are not already in history
-  newMappings
-    .filter(mapping => Boolean(mapping.parameterId) && mapping.source !== 'history')
-    .forEach(mapping => {
-      const key = buildHistoryKey(
-        templateId,
-        mapping.sheet,
-        mapping.normLabel,
-        mapping.parameterId
-      );
-      if (!existingKeys.has(key)) {
-        existingKeys.add(key);
-        rows.push([
-          templateId,
-          mapping.sheet ?? '',
-          mapping.rawLabel ?? '',
-          mapping.normLabel ?? '',
-          mapping.parameterId,
-          mappedBy,
-          mappedAt,
-        ]);
-      }
-    });
-
+  appendNewMappings(newMappings, existingKeys, meta, rows);
   return serializeCsvRows(rows);
 }
 

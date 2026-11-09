@@ -157,6 +157,37 @@ console.log('--- Testing excelReader.js ---');
   assert(rows.length === 0, 'Bounds column scanning to startCol + 25, ignoring labels past column 25');
 }
 
+{
+  const col25MockXlsx = {
+    read() {
+      return {
+        SheetNames: ['Col25Sheet'],
+        Sheets: {
+          Col25Sheet: {
+            '!ref': 'A1:Z1',
+            Z1: { t: 's', v: 'Label At Bound' },
+          },
+        },
+      };
+    },
+    utils: {
+      decode_range() {
+        return { s: { r: 0, c: 0 }, e: { r: 0, c: 25 } };
+      },
+      encode_cell(cellObj) {
+        if (cellObj.c === 25) return 'Z1';
+        return `A${cellObj.r + 1}`;
+      },
+      decode_cell() {
+        return { r: 0, c: 25 };
+      },
+    },
+  };
+
+  const rows = await readSheetRows(new ArrayBuffer(10), 'Col25Sheet', { xlsx: col25MockXlsx });
+  assert(rows.length === 1 && rows[0].rawLabel === 'Label At Bound', 'Scans up to startCol + 25 inclusive');
+}
+
 // Integration test with real SheetJS library if online
 try {
   const response = await fetch('https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js');

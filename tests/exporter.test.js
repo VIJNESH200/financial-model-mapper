@@ -36,6 +36,9 @@ console.log('--- Testing exporter.js ---');
   assert(escapeCsvField('\rreturn') === "\"'\rreturn\"", 'Prefixes carriage return trigger and applies RFC 4180 quotes');
   assert(escapeCsvField('- Depreciation, Amortization') === "\"- Depreciation, Amortization\"".replace('-', "'-"), 'Prefixes trigger and quotes for commas');
   assert(escapeCsvField('=cmd|" /C calc"!A0') === "\"=cmd|\"\" /C calc\"\"!A0\"".replace('=', "'="), 'Prefixes trigger and doubles internal quotes');
+  assert(escapeCsvField(-10) === '-10', 'Does not prefix numeric negative numbers');
+  assert(escapeCsvField(10) === '10', 'Handles positive numbers');
+  assert(escapeCsvField(0) === '0', 'Handles 0');
 }
 
 {

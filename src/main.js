@@ -250,33 +250,26 @@ async function loadSheet(sheetName) {
 
   updateFileProgress(10, `Parsing sheet "${sheetName}"...`, true);
 
-  try {
-    const rawRows = await readSheetRows(state.workbookBuffer, sheetName, {
-      normalisationOptions: state.settings.normalisation,
-      onProgress: percent => updateFileProgress(percent, `Parsing rows... ${percent}%`),
-    });
+  const rawRows = await readSheetRows(state.workbookBuffer, sheetName, {
+    normalisationOptions: state.settings.normalisation,
+    onProgress: percent => updateFileProgress(percent, `Parsing rows... ${percent}%`),
+  });
 
-    const matchingContext = getMatchingContext();
+  const matchingContext = getMatchingContext();
+  const sheetRows = rawRows.map(row => ({
+    ...row,
+    suggestion: matchRow(row, matchingContext),
+    assignedParameterId: null,
+    source: 'none',
+    confidence: null,
+  }));
 
-    const sheetRows = rawRows.map(row => ({
-      ...row,
-      suggestion: matchRow(row, matchingContext),
-      assignedParameterId: null,
-      source: 'none',
-      confidence: null,
-    }));
+  state.sheetRowsMap.set(sheetName, sheetRows);
+  state.rows = sheetRows;
 
-    state.sheetRowsMap.set(sheetName, sheetRows);
-    state.rows = sheetRows;
-
-    updateFileProgress(100, 'Complete', false);
-    toggleWorkspaceVisibility(true);
-    refreshTableView();
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    showBannerMessage(`Error reading sheet "${sheetName}": ${message}`, 'error');
-    updateFileProgress(0, '', false);
-  }
+  updateFileProgress(100, 'Complete', false);
+  toggleWorkspaceVisibility(true);
+  refreshTableView();
 }
 
 /**
@@ -285,6 +278,11 @@ async function loadSheet(sheetName) {
 function resetWorkspaceState() {
   state.rows = [];
   state.sheetRowsMap.clear();
+  state.modelFileName = '';
+  state.workbookBuffer = null;
+  state.sheetNames = [];
+  state.currentSheet = '';
+  populateSheetOptions([]);
   const tbody = document.getElementById('mapping-table-body');
   if (tbody) {
     tbody.innerHTML = '';
@@ -294,38 +292,54 @@ function resetWorkspaceState() {
 }
 
 /**
+/**
+ * Updates file info label with name and size.
+ * @param {File} file Uploaded file object.
+ */
+function displayModelFileInfo(file) {
+  const infoEl = document.getElementById('model-file-info');
+  if (infoEl) {
+    const sizeMb = (file.size / (1024 * 1024)).toFixed(2);
+    infoEl.textContent = `${file.name} (${sizeMb} MB)`;
+  }
+}
+
+/**
+ * Removes cached sheet rows that do not belong to the active workbook.
+ * @param {string[]} validSheets List of active sheet names.
+ */
+function cleanupStaleSheets(validSheets) {
+  for (const sheetKey of Array.from(state.sheetRowsMap.keys())) {
+    if (!validSheets.includes(sheetKey)) {
+      state.sheetRowsMap.delete(sheetKey);
+    }
+  }
+}
+
+/**
  * Handles Excel file input selection.
  * @param {Event} event File input event.
  */
 async function handleExcelUpload(event) {
   const target = /** @type {HTMLInputElement} */ (event.target);
   const file = target.files?.[0];
-  if (!file) {
-    return;
-  }
+  if (!file) return;
 
-  const infoEl = document.getElementById('model-file-info');
-  if (infoEl) {
-    const sizeMb = (file.size / (1024 * 1024)).toFixed(2);
-    infoEl.textContent = `${file.name} (${sizeMb} MB)`;
-  }
-
+  displayModelFileInfo(file);
   updateFileProgress(0, 'Reading file buffer...', file.size > 2 * 1024 * 1024);
 
   try {
     const buffer = await file.arrayBuffer();
     const sheetNames = getSheetNames(buffer);
-    if (sheetNames.length === 0) {
-      throw new Error('Workbook contains no sheets.');
-    }
+    if (sheetNames.length === 0) throw new Error('Workbook contains no sheets.');
 
-    state.modelFileName = file.name;
     state.workbookBuffer = buffer;
     state.sheetNames = sheetNames;
-    state.sheetRowsMap.clear();
+    populateSheetOptions(sheetNames, sheetNames[0]);
+    await loadSheet(sheetNames[0]);
 
-    populateSheetOptions(state.sheetNames, state.sheetNames[0]);
-    await loadSheet(state.sheetNames[0]);
+    state.modelFileName = file.name;
+    cleanupStaleSheets(sheetNames);
     showBannerMessage(`Loaded workbook "${file.name}" with ${sheetNames.length} sheet(s).`, 'success');
   } catch (error) {
     resetWorkspaceState();
@@ -333,6 +347,7 @@ async function handleExcelUpload(event) {
     showBannerMessage(`Failed to read Excel workbook: ${message}`, 'error');
   } finally {
     updateFileProgress(0, '', false);
+    target.value = '';
   }
 }
 
@@ -402,31 +417,9 @@ async function handleHistoryUpload(event) {
 }
 
 /**
- * Attaches event listeners for file uploads and resets.
+ * Binds debounced input and immediate change listeners for template ID.
  */
-function wireUploadListeners() {
-  document.getElementById('model-file-input')?.addEventListener('change', handleExcelUpload);
-
-  document.getElementById('sheet-select')?.addEventListener('change', event => {
-    const target = /** @type {HTMLSelectElement} */ (event.target);
-    if (target.value) {
-      loadSheet(target.value);
-    }
-  });
-
-  document.getElementById('taxonomy-file-input')?.addEventListener('change', handleTaxonomyUpload);
-
-  document.getElementById('btn-reset-taxonomy')?.addEventListener('click', () => {
-    state.activeTaxonomy = state.defaultTaxonomy;
-    state.aliasLookup = buildAliasLookup(state.activeTaxonomy, state.settings.normalisation);
-    cacheTaxonomyOptions(state.activeTaxonomy);
-    updateConfigHints();
-    rematchAllSheets();
-    showBannerMessage('Reset to bundled default taxonomy.', 'info');
-  });
-
-  document.getElementById('history-file-input')?.addEventListener('change', handleHistoryUpload);
-
+function wireTemplateDebounce() {
   const templateIdInput = document.getElementById('template-id-input');
   let debounceTimer = null;
   templateIdInput?.addEventListener('input', () => {
@@ -445,6 +438,20 @@ function wireUploadListeners() {
     }
     rematchAllSheets();
   });
+}
+
+/**
+ * Binds reset buttons for taxonomy and history.
+ */
+function wireResetButtons() {
+  document.getElementById('btn-reset-taxonomy')?.addEventListener('click', () => {
+    state.activeTaxonomy = state.defaultTaxonomy;
+    state.aliasLookup = buildAliasLookup(state.activeTaxonomy, state.settings.normalisation);
+    cacheTaxonomyOptions(state.activeTaxonomy);
+    updateConfigHints();
+    rematchAllSheets();
+    showBannerMessage('Reset to bundled default taxonomy.', 'info');
+  });
 
   document.getElementById('btn-reset-history')?.addEventListener('click', () => {
     state.activeHistory = state.defaultHistory;
@@ -452,6 +459,32 @@ function wireUploadListeners() {
     rematchAllSheets();
     showBannerMessage('Reset to bundled default history.', 'info');
   });
+}
+
+/**
+ * Attaches event listeners for file uploads and resets.
+ */
+function wireUploadListeners() {
+  document.getElementById('model-file-input')?.addEventListener('change', handleExcelUpload);
+
+  document.getElementById('sheet-select')?.addEventListener('change', async event => {
+    const target = /** @type {HTMLSelectElement} */ (event.target);
+    if (target.value) {
+      try {
+        await loadSheet(target.value);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        showBannerMessage(`Error reading sheet "${target.value}": ${message}`, 'error');
+        updateFileProgress(0, '', false);
+      }
+    }
+  });
+
+  document.getElementById('taxonomy-file-input')?.addEventListener('change', handleTaxonomyUpload);
+  document.getElementById('history-file-input')?.addEventListener('change', handleHistoryUpload);
+
+  wireResetButtons();
+  wireTemplateDebounce();
 }
 
 /**
@@ -502,58 +535,66 @@ function wireWorkspaceListeners() {
 }
 
 /**
+ * Handles exporting current mapping decisions as CSV.
+ */
+function handleExportMapping() {
+  const allRows = getAllMappedRows();
+  const mappingCsv = buildMappingCsv(
+    allRows.map(r => ({
+      sheet: r.sheet,
+      rowIndex: r.rowIndex,
+      rawLabel: r.rawLabel,
+      normLabel: r.normLabel,
+      parameterId: r.assignedParameterId,
+      source: r.assignedParameterId ? r.source : 'none',
+      confidence: r.assignedParameterId ? r.confidence : '',
+    })),
+    state.modelFileName
+  );
+  const sheetPart = state.sheetRowsMap.size > 1 ? 'all_sheets' : (state.currentSheet || 'sheet');
+  const exportName = `${state.modelFileName || 'model'}_${sheetPart}_mapping.csv`;
+  triggerCsvDownload(exportName, mappingCsv);
+  showBannerMessage(`Exported mapping CSV: ${exportName}`, 'success');
+}
+
+/**
+ * Handles exporting updated history CSV and syncing in-memory history.
+ */
+function handleExportHistory() {
+  const tplInput = /** @type {HTMLInputElement} */ (document.getElementById('export-template-id'));
+  const mappedByInput = /** @type {HTMLInputElement} */ (document.getElementById('export-mapped-by'));
+  const templateId = tplInput?.value.trim() || 'user_model';
+  const mappedBy = mappedByInput?.value.trim() || 'analyst';
+
+  const allRows = getAllMappedRows();
+  const updatedHistoryCsv = buildUpdatedHistoryCsv(
+    state.activeHistory,
+    allRows.map(r => ({
+      sheet: r.sheet,
+      rawLabel: r.rawLabel,
+      normLabel: r.normLabel,
+      parameterId: r.assignedParameterId,
+      source: r.source,
+    })),
+    { templateId, mappedBy }
+  );
+
+  const { records } = parseHistoryCsv(updatedHistoryCsv, state.settings.normalisation);
+  if (records && records.length > 0) {
+    state.activeHistory = records;
+    updateConfigHints();
+  }
+
+  triggerCsvDownload('updated_history.csv', updatedHistoryCsv);
+  showBannerMessage('Exported updated history CSV with accepted mappings.', 'success');
+}
+
+/**
  * Attaches event listeners for CSV exports and dismissals.
  */
 function wireExportListeners() {
-  document.getElementById('btn-export-mapping')?.addEventListener('click', () => {
-    const allRows = getAllMappedRows();
-    const mappingCsv = buildMappingCsv(
-      allRows.map(r => ({
-        sheet: r.sheet,
-        rowIndex: r.rowIndex,
-        rawLabel: r.rawLabel,
-        normLabel: r.normLabel,
-        parameterId: r.assignedParameterId,
-        source: r.assignedParameterId ? r.source : 'none',
-        confidence: r.assignedParameterId ? r.confidence : '',
-      })),
-      state.modelFileName
-    );
-    const sheetPart = state.sheetRowsMap.size > 1 ? 'all_sheets' : (state.currentSheet || 'sheet');
-    const exportName = `${state.modelFileName || 'model'}_${sheetPart}_mapping.csv`;
-    triggerCsvDownload(exportName, mappingCsv);
-    showBannerMessage(`Exported mapping CSV: ${exportName}`, 'success');
-  });
-
-  document.getElementById('btn-export-history')?.addEventListener('click', () => {
-    const tplInput = /** @type {HTMLInputElement} */ (document.getElementById('export-template-id'));
-    const mappedByInput = /** @type {HTMLInputElement} */ (document.getElementById('export-mapped-by'));
-    const templateId = tplInput?.value.trim() || 'user_model';
-    const mappedBy = mappedByInput?.value.trim() || 'analyst';
-
-    const allRows = getAllMappedRows();
-    const updatedHistoryCsv = buildUpdatedHistoryCsv(
-      state.activeHistory,
-      allRows.map(r => ({
-        sheet: r.sheet,
-        rawLabel: r.rawLabel,
-        normLabel: r.normLabel,
-        parameterId: r.assignedParameterId,
-        source: r.source,
-      })),
-      { templateId, mappedBy }
-    );
-
-    const { records } = parseHistoryCsv(updatedHistoryCsv, state.settings.normalisation);
-    if (records && records.length > 0) {
-      state.activeHistory = records;
-      updateConfigHints();
-    }
-
-    triggerCsvDownload('updated_history.csv', updatedHistoryCsv);
-    showBannerMessage('Exported updated history CSV with accepted mappings.', 'success');
-  });
-
+  document.getElementById('btn-export-mapping')?.addEventListener('click', handleExportMapping);
+  document.getElementById('btn-export-history')?.addEventListener('click', handleExportHistory);
   document.getElementById('status-dismiss')?.addEventListener('click', hideBannerMessage);
 }
 
