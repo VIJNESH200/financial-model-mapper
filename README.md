@@ -68,7 +68,7 @@ The tool parses standard Excel workbooks in the browser:
 - **Supported extensions**: `.xlsx`, `.xlsm`.
 - **Sheet selection**: Workbook metadata is read first (`bookSheets: true`); only the selected sheet is parsed.
 - **Row label extraction**: Scans columns from left to right and selects the first non-empty cell containing textual characters (`/\p{L}/u`), ignoring purely numerical values or standalone years. Formula error cells (`#REF!`, `#VALUE!`, `#N/A`, `#NAME?`) are explicitly ignored.
-- **Column scanning bounds**: Scans from the leftmost column up to 25 columns past the start column (`Math.min(endCol, startCol + 25)`). Line item labels positioned further right than 25 columns from the first populated column are ignored to prevent performance degradation on styled worksheets with full-width boundaries (e.g. up to column 16,384).
+- **Column scanning bounds**: Labels are read from the first column of the sheet’s used range, checking up to 26 columns to the right. Text placed further right is ignored.
 - **Performance**: Skips fully empty rows early and yields to the UI thread in 250-row chunks with progress reporting.
 
 ### 2. Taxonomy JSON (`config/taxonomy.json`)
@@ -157,7 +157,7 @@ model_file,sheet,row_index,row_label,parameter_id,source,confidence
 - `parameter_id` (string): Assigned taxonomy parameter identifier (blank if unmapped).
 - `source` (enum): Origin of assignment (`'history'`, `'taxonomy'`, `'manual'`, or `'none'`).
 - `confidence` (enum/string): Confidence score (`'high'`, `'medium'`, or blank if unmapped/manual).
-- **Formula Sanitization (CWE-1236)**: Cell values starting with spreadsheet formula triggers (`=`, `+`, `-`, `@`, `\t`, `\r`) are automatically prefixed with a leading apostrophe (`'`) upon export (e.g. `- Operating Expenses` exports as `'- Operating Expenses`). This prevents spreadsheet applications (Excel, Google Sheets) from executing cell contents as formulas or DDE commands. Normalization automatically strips this leading apostrophe during any subsequent mapping import.
+- **Formula Sanitization (CWE-1236)**: Exported label text starting with =, +, -, @, or a tab gets a leading apostrophe so spreadsheet apps don’t run it as a formula. The apostrophe stays in the row_label column. normalized_label removes it, so matching is unaffected.
 
 ### 6. Updated History CSV Export (`updated_history.csv`)
 
