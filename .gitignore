@@ -8,3 +8,6 @@ desktop.ini
 *.tmp
 .vscode/
 .idea/
+
+# Internal Review Artifacts
+goldfish_review_report.md
