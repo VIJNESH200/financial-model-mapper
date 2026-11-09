@@ -43,7 +43,8 @@ financial-model-mapper/
 ├── data/
 │   └── sample-history.csv  Sample historical mapping records
 ├── sample/
-│   └── README.md           Guidance on acquiring sample financial models
+│   ├── README.md                  Guidance on sample financial models
+│   └── sample_financial_model.xlsx Bundled 3-statement test workbook (IS, BS, CF)
 ├── src/
 │   ├── main.js             Application entry point and state management
 │   ├── ui.js               DOM rendering and UI event helpers
