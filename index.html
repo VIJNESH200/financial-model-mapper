@@ -204,5 +204,16 @@
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
   <!-- Application Entry Point -->
   <script type="module" src="src/main.js"></script>
+  <!-- Fallback guidance for file:/// protocol when ES modules are blocked by browser CORS -->
+  <script>
+    if (window.location.protocol === 'file:') {
+      const banner = document.getElementById('status-banner');
+      const msg = document.getElementById('status-message');
+      if (banner && msg) {
+        banner.className = 'status-banner error';
+        msg.innerHTML = '<strong>Local HTTP Server Required:</strong> You opened this file directly from disk (<code>file:///</code>). Modern web browsers block ES JavaScript modules and configuration loading under <code>file:///</code>. Please run <code>python -m http.server 8000</code> in the project directory, then navigate to <a href="http://localhost:8000" style="color: inherit; text-decoration: underline; font-weight: 600;">http://localhost:8000</a>.';
+      }
+    }
+  </script>
 </body>
 </html>
