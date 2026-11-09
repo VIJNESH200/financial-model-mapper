@@ -61,6 +61,129 @@ financial-model-mapper/
     └── exporter.test.js    CSV export serialization tests
 ```
 
+## Implementation & Customization Guide
+
+This section explains how to implement Financial Model Mapper in your team's workflow and customize it to match your organization's specific financial statements, chart of accounts, and data pipelines.
+
+### 1. Customizing the Target Taxonomy (`config/taxonomy.json`)
+
+The bundled taxonomy provides standard 3-statement US GAAP / IFRS parameters, but you can customize it for your firm's specific reporting structure (e.g., SaaS recurring metrics, manufacturing cost centers, or banking capital ratios):
+
+1. **Direct Configuration**: Edit `config/taxonomy.json` to define your parameters.
+   ```json
+   {
+     "version": 1,
+     "parameters": [
+       {
+         "id": "arr",
+         "displayName": "Annual Recurring Revenue (ARR)",
+         "category": "saas_metrics",
+         "aliases": ["ARR", "Ending ARR", "Exit ARR", "Committed ARR"]
+       },
+       {
+         "id": "gross_margin_pct",
+         "displayName": "Gross Margin %",
+         "category": "profitability",
+         "aliases": ["Gross Margin", "GM %", "Gross Profit Margin"]
+       }
+     ]
+   }
+   ```
+2. **Category Grouping**: The `category` slug controls the `<optgroup>` labels in the manual assignment dropdown (e.g., `saas_metrics` displays as `Saas Metrics`).
+3. **Alias Coverage**: Add company-specific and client-specific abbreviations to `aliases`. The engine normalizes both `displayName` and all `aliases`, enabling zero-configuration matching when analysts encounter varied naming conventions.
+4. **Ad-Hoc UI Uploads**: If analysts work across multiple distinct taxonomies (e.g. standard GAAP vs. custom management reporting), they can upload custom `.json` files on the fly via the **"Replace Taxonomy (.json)"** button without changing code.
+
+### 2. Seeding Historical Mappings (`data/sample-history.csv`)
+
+Historical matching is the highest-confidence matching tier (`confidence: 'high'`). You can bootstrap the engine with your team's existing mapping database:
+
+1. **Populate History**: Replace or append records in `data/sample-history.csv`. Columns required:
+   ```csv
+   template_id,sheet,row_label,normalized_label,parameter_id,mapped_by,mapped_at
+   saas_model_v1,IS,Subscription Net Sales,,revenue,senior_analyst,2025-01-15T10:00:00Z
+   pe_standard,BS,Cash & Equivalents,,cash_and_equivalents,associate,2025-02-01T12:00:00Z
+   ```
+2. **Leave `normalized_label` Blank**: If omitted, the engine automatically computes the normalized label on ingest using the active normalization settings.
+3. **Template Scoping**: Use `template_id` to separate distinct modeling conventions. When an analyst enters a template ID (e.g., `saas_model_v1`) into the UI's **Template ID** input, the engine scopes history matches to that template first, preventing conflicts between divergent client models.
+4. **Tie-Breaking**: If multiple historical records match the same sheet and label, the engine prefers the record with the most recent `mapped_at` timestamp.
+
+### 3. Tuning Matching & Normalization Rules (`config/settings.json`)
+
+Adjust matching behavior in `config/settings.json` to suit your models:
+
+```json
+{
+  "normalisation": {
+    "lowercase": true,
+    "trimWhitespace": true,
+    "collapseSpaces": true,
+    "stripPunctuation": true
+  },
+  "matching": {
+    "useSheetContext": true,
+    "minimumConfidence": "low"
+  }
+}
+```
+
+- **`matching.useSheetContext`**:
+  - `true` (default): Line items match historical records only if they appear on the same sheet (e.g. `IS` vs `BS`). Recommended when identical labels appear on multiple sheets (such as `"Depreciation"` on both Income Statement and Cash Flow).
+  - `false`: Matches historical records across any sheet regardless of sheet name.
+- **`matching.minimumConfidence`**:
+  - `'low'` (default): Accepts all matches (`high` from history, `medium` from taxonomy).
+  - `'medium'`: Suppresses low-confidence results, returning only medium and high matches.
+  - `'high'`: Displays only historical matches; taxonomy aliases are marked as unmapped (`source: 'none'`).
+
+### 4. Deployment Strategies (Zero Infrastructure)
+
+Because Financial Model Mapper is built with 100% static HTML, CSS, and vanilla ES modules, it requires zero backend servers, databases, or container infrastructure:
+
+* **Local Analyst Workstation**:
+  * Clone the repository and run `python -m http.server 8000` or `npx serve .`.
+  * Open `http://localhost:8000`.
+* **Internal Corporate Intranet / Cloud Storage**:
+  * Upload the repository folder to any static hosting service: an internal AWS S3 bucket with CloudFront, Google Cloud Storage, Azure Blob Storage, or an internal NGINX server.
+  * *Security Guarantee*: All Excel parsing and mapping logic runs 100% client-side inside the analyst's browser tab. Model data and confidential financials are never uploaded to any external server.
+* **GitHub Pages**:
+  * Enable GitHub Pages in repository settings pointing to the `main` branch root. Team members can immediately access the tool via a web URL.
+
+### 5. Daily Analyst Workflow & Continuous Learning Loop
+
+The tool is designed as a continuous learning loop that grows smarter over time:
+
+1. **Step 1: Open & Ingest**: Navigate to the tool. Default taxonomy and historical mappings load automatically into memory.
+2. **Step 2: Upload Financial Model**: Select the client or company Excel workbook (`.xlsx`, `.xlsm`). Choose the statement tab (`IS`, `BS`, `CF`).
+3. **Step 3: One-Click High-Confidence Acceptance**: Click **"Accept All High-Confidence"** to instantly map recognized historical lines.
+4. **Step 4: Review & Override**: Filter by **"Only Unmapped"** to review remaining items. Assign parameters from the categorized dropdown or leave non-pertinent items unmapped.
+5. **Step 5: Export Mappings**: Click **"Export Mapping CSV"** to generate `mapping_export.csv` containing final line item mappings for downstream data systems.
+6. **Step 6: Expand Knowledge Base**: Click **"Export Updated History CSV"**. The tool merges all accepted mappings from the session, sanitizes formula characters (CWE-1236), deduplicates against existing records, and exports `updated_history.csv`.
+7. **Step 7: Commit Updated History**: Replace `data/sample-history.csv` with the exported file in git. Future models processed by any team member will now automatically match those lines with high confidence.
+
+### 6. Downstream Data Integration (Python / Pandas / SQL)
+
+The exported mapping CSV (`model_file, sheet, row_index, row_label, parameter_id, source, confidence`) interfaces cleanly with data extraction pipelines. Example Python snippet to apply mappings to financial data:
+
+```python
+import pandas as pd
+
+# 1. Load exported mappings and raw model figures
+mappings = pd.read_csv('mapping_export.csv')
+raw_model = pd.read_excel('model.xlsx', sheet_name='IS')
+
+# 2. Join parameter IDs by 1-based row index
+mapped_model = raw_model.merge(
+    mappings[['row_index', 'parameter_id', 'source']],
+    left_index=True,
+    right_on='row_index',
+    how='left'
+)
+
+# 3. Aggregate into standardized reporting metrics
+clean_financials = mapped_model.dropna(subset=['parameter_id'])
+standardized_summary = clean_financials.groupby('parameter_id').sum(numeric_only=True)
+print(standardized_summary)
+```
+
 ## File Formats
 
 ### 1. Excel Financial Model Input (`.xlsx`, `.xlsm`)
