@@ -119,9 +119,7 @@ function buildHistoryRecord(row, columnMap, normalisationOptions) {
   if (!rowLabel || !parameterId) {
     return null;
   }
-  if (!normLabel) {
-    normLabel = normaliseLabel(rowLabel, normalisationOptions);
-  }
+  normLabel = normaliseLabel(normLabel || rowLabel, normalisationOptions);
 
   return {
     templateId,

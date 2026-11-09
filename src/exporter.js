@@ -22,8 +22,11 @@ const HISTORY_CSV_HEADER = [
   'mapped_at',
 ];
 
+const FORMULA_TRIGGERS = ['=', '+', '-', '@', '\t', '\r'];
+
 /**
- * Escapes a single CSV value according to RFC 4180.
+ * Escapes a single CSV value according to RFC 4180 and sanitizes formula triggers.
+ * Prefixes formula triggers (=, +, -, @, \t, \r) with a single quote to mitigate CWE-1236.
  * Wraps values with commas, quotes, or newlines in quotes and escapes internal quotes.
  * @param {unknown} value The raw cell value.
  * @return {string} Escaped string representation.
@@ -32,7 +35,10 @@ export function escapeCsvField(value) {
   if (value === null || value === undefined) {
     return '';
   }
-  const str = String(value);
+  let str = String(value);
+  if (str.length > 0 && FORMULA_TRIGGERS.includes(str[0])) {
+    str = `'${str}`;
+  }
   if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
     return `"${str.replace(/"/g, '""')}"`;
   }

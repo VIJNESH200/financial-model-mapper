@@ -89,6 +89,74 @@ console.log('--- Testing excelReader.js ---');
   assert(progressUpdates > 0, 'onProgress was called');
 }
 
+{
+  const errorMockXlsx = {
+    read(buffer, options) {
+      return {
+        SheetNames: ['ErrorSheet'],
+        Sheets: {
+          ErrorSheet: {
+            '!ref': 'A1:C2',
+            A1: { t: 'e', v: 0, w: '#REF!' },
+            B1: { t: 's', v: 'Operating Expenses' },
+            A2: { t: 'e', v: 7, w: '#VALUE!' },
+            B2: { t: 'e', v: 23, w: '#N/A' },
+          },
+        },
+      };
+    },
+    utils: {
+      decode_range() {
+        return { s: { r: 0, c: 0 }, e: { r: 1, c: 2 } };
+      },
+      encode_cell(cellObj) {
+        const colLetter = String.fromCharCode(65 + cellObj.c);
+        return `${colLetter}${cellObj.r + 1}`;
+      },
+      decode_cell(address) {
+        const colLetter = address[0];
+        const rowNum = parseInt(address.slice(1), 10);
+        return { r: rowNum - 1, c: colLetter.charCodeAt(0) - 65 };
+      },
+    },
+  };
+
+  const rows = await readSheetRows(new ArrayBuffer(10), 'ErrorSheet', { xlsx: errorMockXlsx });
+  assert(rows.length === 1, 'Skips row consisting purely of formula error cells (#VALUE!, #N/A)');
+  assert(rows[0].rowIndex === 1 && rows[0].rawLabel === 'Operating Expenses', 'Skips #REF! error cell and extracts subsequent valid text cell');
+}
+
+{
+  const boundedMockXlsx = {
+    read() {
+      return {
+        SheetNames: ['WideSheet'],
+        Sheets: {
+          WideSheet: {
+            '!ref': 'A1:AD1',
+            AD1: { t: 's', v: 'Distant Label' },
+          },
+        },
+      };
+    },
+    utils: {
+      decode_range() {
+        return { s: { r: 0, c: 0 }, e: { r: 0, c: 29 } };
+      },
+      encode_cell(cellObj) {
+        if (cellObj.c === 29) return 'AD1';
+        return `A${cellObj.r + 1}`;
+      },
+      decode_cell() {
+        return { r: 0, c: 29 };
+      },
+    },
+  };
+
+  const rows = await readSheetRows(new ArrayBuffer(10), 'WideSheet', { xlsx: boundedMockXlsx });
+  assert(rows.length === 0, 'Bounds column scanning to startCol + 25, ignoring labels past column 25');
+}
+
 // Integration test with real SheetJS library if online
 try {
   const response = await fetch('https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js');

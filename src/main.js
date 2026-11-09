@@ -15,6 +15,8 @@ import {
   renderMappingTable,
   updateSummaryMetrics,
   toggleWorkspaceVisibility,
+  updateTableRowInPlace,
+  cacheTaxonomyOptions,
 } from './ui.js';
 
 /**
@@ -80,6 +82,7 @@ async function initializeDefaults() {
     state.defaultTaxonomy = taxResult.taxonomy;
     state.activeTaxonomy = taxResult.taxonomy;
     state.aliasLookup = buildAliasLookup(state.activeTaxonomy, state.settings.normalisation);
+    cacheTaxonomyOptions(state.activeTaxonomy);
 
     const histResult = parseHistoryCsv(historyText, state.settings.normalisation);
     state.defaultHistory = histResult.records;
@@ -146,6 +149,18 @@ function rematchAllSheets() {
 }
 
 /**
+ * Assembles the standard user action callbacks.
+ * @return {Object} Callbacks object for ui.js functions.
+ */
+function getActionCallbacks() {
+  return {
+    onAccept: handleAcceptSuggestion,
+    onAssign: handleAssignParameter,
+    onClear: handleClearMapping,
+  };
+}
+
+/**
  * Rerenders table and updates summary indicators.
  */
 function refreshTableView() {
@@ -153,11 +168,7 @@ function refreshTableView() {
     state.rows,
     state.activeTaxonomy,
     state.filter,
-    {
-      onAccept: handleAcceptSuggestion,
-      onAssign: handleAssignParameter,
-      onClear: handleClearMapping,
-    }
+    getActionCallbacks()
   );
   updateSummaryMetrics(state.rows);
 }
@@ -172,7 +183,8 @@ function handleAcceptSuggestion(rowIndex) {
     target.assignedParameterId = target.suggestion.parameterId;
     target.source = target.suggestion.source;
     target.confidence = target.suggestion.confidence;
-    refreshTableView();
+    updateTableRowInPlace(target, getActionCallbacks(), state.filter);
+    updateSummaryMetrics(state.rows);
   }
 }
 
@@ -199,7 +211,8 @@ function handleAssignParameter(rowIndex, parameterId) {
     target.source = 'manual';
     target.confidence = null;
   }
-  refreshTableView();
+  updateTableRowInPlace(target, getActionCallbacks(), state.filter);
+  updateSummaryMetrics(state.rows);
 }
 
 /**
@@ -212,7 +225,8 @@ function handleClearMapping(rowIndex) {
     target.assignedParameterId = null;
     target.source = 'none';
     target.confidence = null;
-    refreshTableView();
+    updateTableRowInPlace(target, getActionCallbacks(), state.filter);
+    updateSummaryMetrics(state.rows);
   }
 }
 
@@ -266,6 +280,20 @@ async function loadSheet(sheetName) {
 }
 
 /**
+ * Resets mapping rows and clears workspace UI on failed workbook load.
+ */
+function resetWorkspaceState() {
+  state.rows = [];
+  state.sheetRowsMap.clear();
+  const tbody = document.getElementById('mapping-table-body');
+  if (tbody) {
+    tbody.innerHTML = '';
+  }
+  updateSummaryMetrics([]);
+  toggleWorkspaceVisibility(false);
+}
+
+/**
  * Handles Excel file input selection.
  * @param {Event} event File input event.
  */
@@ -276,30 +304,31 @@ async function handleExcelUpload(event) {
     return;
   }
 
-  state.modelFileName = file.name;
-  state.sheetRowsMap.clear();
-
   const infoEl = document.getElementById('model-file-info');
   if (infoEl) {
     const sizeMb = (file.size / (1024 * 1024)).toFixed(2);
     infoEl.textContent = `${file.name} (${sizeMb} MB)`;
   }
 
-  const isLarge = file.size > 2 * 1024 * 1024;
-  updateFileProgress(0, 'Reading file buffer...', isLarge);
+  updateFileProgress(0, 'Reading file buffer...', file.size > 2 * 1024 * 1024);
 
   try {
-    state.workbookBuffer = await file.arrayBuffer();
-    state.sheetNames = getSheetNames(state.workbookBuffer);
-
-    if (state.sheetNames.length === 0) {
+    const buffer = await file.arrayBuffer();
+    const sheetNames = getSheetNames(buffer);
+    if (sheetNames.length === 0) {
       throw new Error('Workbook contains no sheets.');
     }
 
+    state.modelFileName = file.name;
+    state.workbookBuffer = buffer;
+    state.sheetNames = sheetNames;
+    state.sheetRowsMap.clear();
+
     populateSheetOptions(state.sheetNames, state.sheetNames[0]);
     await loadSheet(state.sheetNames[0]);
-    showBannerMessage(`Loaded workbook "${file.name}" with ${state.sheetNames.length} sheet(s).`, 'success');
+    showBannerMessage(`Loaded workbook "${file.name}" with ${sheetNames.length} sheet(s).`, 'success');
   } catch (error) {
+    resetWorkspaceState();
     const message = error instanceof Error ? error.message : String(error);
     showBannerMessage(`Failed to read Excel workbook: ${message}`, 'error');
   } finally {
@@ -327,6 +356,7 @@ async function handleTaxonomyUpload(event) {
 
     state.activeTaxonomy = taxonomy;
     state.aliasLookup = buildAliasLookup(state.activeTaxonomy, state.settings.normalisation);
+    cacheTaxonomyOptions(state.activeTaxonomy);
     updateConfigHints();
     rematchAllSheets();
     showBannerMessage(`Loaded custom taxonomy with ${taxonomy.parameters.length} parameters.`, 'success');
@@ -357,7 +387,14 @@ async function handleHistoryUpload(event) {
     state.activeHistory = records;
     updateConfigHints();
     rematchAllSheets();
-    showBannerMessage(`Loaded ${records.length} historical mapping records.`, 'success');
+    if (errors.length > 0) {
+      showBannerMessage(
+        `Loaded ${records.length} historical mapping records (${errors.length} row(s) skipped).`,
+        'info'
+      );
+    } else {
+      showBannerMessage(`Loaded ${records.length} historical mapping records.`, 'success');
+    }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     showBannerMessage(`History error: ${message}`, 'error');
@@ -382,6 +419,7 @@ function wireUploadListeners() {
   document.getElementById('btn-reset-taxonomy')?.addEventListener('click', () => {
     state.activeTaxonomy = state.defaultTaxonomy;
     state.aliasLookup = buildAliasLookup(state.activeTaxonomy, state.settings.normalisation);
+    cacheTaxonomyOptions(state.activeTaxonomy);
     updateConfigHints();
     rematchAllSheets();
     showBannerMessage('Reset to bundled default taxonomy.', 'info');
@@ -390,10 +428,21 @@ function wireUploadListeners() {
   document.getElementById('history-file-input')?.addEventListener('change', handleHistoryUpload);
 
   const templateIdInput = document.getElementById('template-id-input');
+  let debounceTimer = null;
   templateIdInput?.addEventListener('input', () => {
-    rematchAllSheets();
+    if (debounceTimer) {
+      clearTimeout(debounceTimer);
+    }
+    debounceTimer = setTimeout(() => {
+      debounceTimer = null;
+      rematchAllSheets();
+    }, 250);
   });
   templateIdInput?.addEventListener('change', () => {
+    if (debounceTimer) {
+      clearTimeout(debounceTimer);
+      debounceTimer = null;
+    }
     rematchAllSheets();
   });
 
@@ -430,7 +479,7 @@ function wireWorkspaceListeners() {
   document.getElementById('btn-accept-high')?.addEventListener('click', () => {
     let acceptedCount = 0;
     state.rows.forEach(r => {
-      if (r.suggestion?.confidence === 'high' && r.suggestion?.parameterId) {
+      if (!r.assignedParameterId && r.suggestion?.confidence === 'high' && r.suggestion?.parameterId) {
         r.assignedParameterId = r.suggestion.parameterId;
         r.source = r.suggestion.source;
         r.confidence = r.suggestion.confidence;
@@ -494,6 +543,13 @@ function wireExportListeners() {
       })),
       { templateId, mappedBy }
     );
+
+    const { records } = parseHistoryCsv(updatedHistoryCsv, state.settings.normalisation);
+    if (records && records.length > 0) {
+      state.activeHistory = records;
+      updateConfigHints();
+    }
+
     triggerCsvDownload('updated_history.csv', updatedHistoryCsv);
     showBannerMessage('Exported updated history CSV with accepted mappings.', 'success');
   });

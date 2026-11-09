@@ -26,6 +26,16 @@ console.log('--- Testing exporter.js ---');
   assert(escapeCsvField('say "hi"') === '"say ""hi"""', 'Doubles internal quotes');
   assert(escapeCsvField('line1\nline2') === '"line1\nline2"', 'Quotes newlines');
   assert(escapeCsvField(null) === '', 'Handles null');
+
+  // Formula injection sanitization (CWE-1236)
+  assert(escapeCsvField('=SUM(A1:B10)') === "'=SUM(A1:B10)", 'Prefixes = trigger with single quote');
+  assert(escapeCsvField('+44') === "'+44", 'Prefixes + trigger with single quote');
+  assert(escapeCsvField('- Depreciation') === "'- Depreciation", 'Prefixes - trigger with single quote');
+  assert(escapeCsvField('@SUM(1)') === "'@SUM(1)", 'Prefixes @ trigger with single quote');
+  assert(escapeCsvField('\tcmd') === "'\tcmd", 'Prefixes tab trigger with single quote');
+  assert(escapeCsvField('\rreturn') === "\"'\rreturn\"", 'Prefixes carriage return trigger and applies RFC 4180 quotes');
+  assert(escapeCsvField('- Depreciation, Amortization') === "\"- Depreciation, Amortization\"".replace('-', "'-"), 'Prefixes trigger and quotes for commas');
+  assert(escapeCsvField('=cmd|" /C calc"!A0') === "\"=cmd|\"\" /C calc\"\"!A0\"".replace('=', "'="), 'Prefixes trigger and doubles internal quotes');
 }
 
 {

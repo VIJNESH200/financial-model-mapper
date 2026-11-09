@@ -23,6 +23,7 @@ export function getSheetNames(arrayBuffer, xlsxInstance = globalThis.XLSX) {
 /**
  * Finds the primary row label from cells in an Excel row.
  * Scans columns from left to right and selects the first non-empty text value.
+ * Caps column scanning to 25 columns to bound empty cell lookups on styled sheets.
  * @param {Object} worksheet SheetJS worksheet object.
  * @param {number} rowZeroIndexed 0-based row index.
  * @param {number} startCol 0-based starting column index.
@@ -32,11 +33,16 @@ export function getSheetNames(arrayBuffer, xlsxInstance = globalThis.XLSX) {
  */
 function extractRowLabel(worksheet, rowZeroIndexed, startCol, endCol, xlsxInstance) {
   let fallbackLabel = null;
+  const maxCol = Math.min(endCol, startCol + 25);
 
-  for (let c = startCol; c <= endCol; c += 1) {
+  for (let c = startCol; c <= maxCol; c += 1) {
     const cellAddress = xlsxInstance.utils.encode_cell({ r: rowZeroIndexed, c });
     const cell = worksheet[cellAddress];
     if (!cell || cell.v === undefined || cell.v === null) {
+      continue;
+    }
+
+    if (cell.t === 'e') {
       continue;
     }
 

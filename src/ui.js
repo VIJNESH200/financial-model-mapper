@@ -135,13 +135,16 @@ export function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
+let cachedTaxonomyRef = null;
+let cachedParameterOptionsHtml = '';
+
 /**
- * Generates options HTML for the parameter assignment dropdown.
+ * Pre-generates and caches the parameter <option> and <optgroup> HTML markup.
  * @param {Object} taxonomy Validated taxonomy object.
- * @param {string|null} selectedId Currently assigned parameter id.
- * @return {string} HTML string containing optgroups and options.
+ * @return {string} Cached HTML string.
  */
-export function buildParameterOptionsHtml(taxonomy, selectedId) {
+export function cacheTaxonomyOptions(taxonomy) {
+  cachedTaxonomyRef = taxonomy;
   let html = '<option value="">-- Unmapped --</option>';
   const groups = groupTaxonomyByCategory(taxonomy);
 
@@ -149,15 +152,42 @@ export function buildParameterOptionsHtml(taxonomy, selectedId) {
     const escapedCategory = escapeHtml(formatCategoryLabel(category));
     html += `<optgroup label="${escapedCategory}">`;
     for (const param of params) {
-      const isSelected = param.id === selectedId ? ' selected' : '';
       const escapedId = escapeHtml(param.id);
       const escapedDisplayName = escapeHtml(param.displayName);
-      html += `<option value="${escapedId}"${isSelected}>${escapedDisplayName}</option>`;
+      html += `<option value="${escapedId}">${escapedDisplayName}</option>`;
     }
     html += '</optgroup>';
   }
 
-  return html;
+  cachedParameterOptionsHtml = html;
+  return cachedParameterOptionsHtml;
+}
+
+/**
+ * Returns parameter options HTML markup, utilizing the cached version when available.
+ * @param {Object} taxonomy Validated taxonomy object.
+ * @return {string} HTML string containing optgroups and options.
+ */
+export function getParameterOptionsHtml(taxonomy) {
+  if (taxonomy && taxonomy === cachedTaxonomyRef && cachedParameterOptionsHtml) {
+    return cachedParameterOptionsHtml;
+  }
+  return cacheTaxonomyOptions(taxonomy);
+}
+
+/**
+ * Generates options HTML for the parameter assignment dropdown.
+ * Retained for backwards compatibility.
+ * @param {Object} taxonomy Validated taxonomy object.
+ * @param {string|null} [selectedId] Currently assigned parameter id.
+ * @return {string} HTML string containing optgroups and options.
+ */
+export function buildParameterOptionsHtml(taxonomy, selectedId = null) {
+  const optionsHtml = getParameterOptionsHtml(taxonomy);
+  if (!selectedId) {
+    return optionsHtml;
+  }
+  return optionsHtml.replace(`value="${escapeHtml(selectedId)}"`, `value="${escapeHtml(selectedId)}" selected`);
 }
 
 /**
@@ -206,9 +236,6 @@ function matchesFilter(item, filter) {
   if (filter === 'unmapped') {
     return !item.assignedParameterId;
   }
-  if (filter === 'low-confidence') {
-    return item.suggestion?.confidence === 'low';
-  }
   if (filter === 'conflicts') {
     return Boolean(item.suggestion?.hasConflict);
   }
@@ -216,14 +243,13 @@ function matchesFilter(item, filter) {
 }
 
 /**
- * Creates the action cell with Accept or Clear buttons.
+ * Updates action cell buttons in place based on row mapping status.
+ * @param {HTMLTableCellElement} tdAction The action cell element.
  * @param {Object} item Row state object.
  * @param {Object} callbacks User action callbacks.
- * @return {HTMLTableCellElement} Created table cell.
  */
-function createActionCell(item, callbacks) {
-  const tdAction = document.createElement('td');
-  tdAction.className = 'col-action';
+export function updateActionCell(tdAction, item, callbacks) {
+  tdAction.innerHTML = '';
 
   if (!item.assignedParameterId && item.suggestion?.parameterId) {
     const btnAccept = document.createElement('button');
@@ -242,8 +268,57 @@ function createActionCell(item, callbacks) {
     btnClear.addEventListener('click', () => callbacks.onClear(item.rowIndex));
     tdAction.appendChild(btnClear);
   }
+}
 
+/**
+ * Creates the action cell with Accept or Clear buttons.
+ * @param {Object} item Row state object.
+ * @param {Object} callbacks User action callbacks.
+ * @return {HTMLTableCellElement} Created table cell.
+ */
+function createActionCell(item, callbacks) {
+  const tdAction = document.createElement('td');
+  tdAction.className = 'col-action';
+  updateActionCell(tdAction, item, callbacks);
   return tdAction;
+}
+
+/**
+ * Updates a specific row element in place in the DOM without full table rebuild.
+ * @param {Object} item Row state object.
+ * @param {Object} callbacks User action callbacks.
+ * @param {string} [activeFilter] Current active filter.
+ */
+export function updateTableRowInPlace(item, callbacks, activeFilter = 'all') {
+  const tbody = document.getElementById('mapping-table-body');
+  if (!tbody) {
+    return;
+  }
+
+  const tr = tbody.querySelector(`tr[data-row-index="${item.rowIndex}"]`);
+  if (!tr) {
+    return;
+  }
+
+  if (activeFilter !== 'all' && !matchesFilter(item, activeFilter)) {
+    tr.remove();
+    if (tbody.children.length === 0) {
+      const emptyRow = document.createElement('tr');
+      emptyRow.innerHTML = '<td colspan="5" style="text-align: center; color: #64748b; padding: 24px;">No rows match the selected filter.</td>';
+      tbody.appendChild(emptyRow);
+    }
+    return;
+  }
+
+  const select = /** @type {HTMLSelectElement|null} */ (tr.querySelector('.col-assignment select'));
+  if (select && select.value !== (item.assignedParameterId || '')) {
+    select.value = item.assignedParameterId || '';
+  }
+
+  const tdAction = /** @type {HTMLTableCellElement|null} */ (tr.querySelector('.col-action'));
+  if (tdAction) {
+    updateActionCell(tdAction, item, callbacks);
+  }
 }
 
 /**
@@ -276,7 +351,8 @@ function createTableRow(item, taxonomy, callbacks) {
   tdAssignment.className = 'col-assignment';
   const select = document.createElement('select');
   select.setAttribute('aria-label', `Assign parameter for ${item.rawLabel}`);
-  select.innerHTML = buildParameterOptionsHtml(taxonomy, item.assignedParameterId);
+  select.innerHTML = getParameterOptionsHtml(taxonomy);
+  select.value = item.assignedParameterId || '';
   select.addEventListener('change', event => {
     const target = /** @type {HTMLSelectElement} */ (event.target);
     callbacks.onAssign(item.rowIndex, target.value);

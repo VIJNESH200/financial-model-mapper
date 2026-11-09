@@ -114,6 +114,16 @@ console.log('--- Running Matcher Engine Unit Tests ---');
   assert(tpl1Result.parameterId === 'revenue', 'Matches parameter from tpl_1');
   assert(tpl1Result.hasConflict === false, 'No conflict when scoped to single template');
 
+  // Case-insensitive scoping: TPL_1 matches tpl_1
+  const upperTplResult = matchRow(row, {
+    history: sampleHistory,
+    taxonomy: sampleTaxonomy,
+    templateId: 'TPL_1',
+    settings: { useSheetContext: true, minimumConfidence: 'low' },
+  });
+  assert(upperTplResult.source === 'history', 'Matches history when templateId casing differs (TPL_1 vs tpl_1)');
+  assert(upperTplResult.parameterId === 'revenue', 'Retrieves correct parameter with uppercase templateId');
+
   // Scope to nonexistent template: falls back to taxonomy
   const nonExistentResult = matchRow(row, {
     history: sampleHistory,

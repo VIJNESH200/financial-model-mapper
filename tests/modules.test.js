@@ -43,13 +43,15 @@ console.log('--- Testing historyLoader.js CSV parsing ---');
 
   const historyCsv = `template_id,sheet,row_label,normalized_label,parameter_id,mapped_by,mapped_at
 tpl_1,IS,"Net Sales, Gross",net sales gross,revenue,analyst1,2025-01-01T00:00:00Z
-tpl_1,IS,Cost of Goods Sold,,cogs,analyst1,2025-01-01T00:01:00Z`;
+tpl_1,IS,Cost of Goods Sold,,cogs,analyst1,2025-01-01T00:01:00Z
+tpl_1,IS,Operating Expenses,OPERATING - EXPENSES (OPEX),opex,analyst1,2025-01-01T00:02:00Z`;
 
   const { records, errors } = parseHistoryCsv(historyCsv);
   assert(errors.length === 0, 'No errors parsing valid history');
-  assert(records.length === 2, 'Parsed 2 records');
+  assert(records.length === 3, 'Parsed 3 records');
   assert(records[0].rowLabel === 'Net Sales, Gross', 'Parsed quoted row_label');
   assert(records[1].normLabel === 'cost of goods sold', 'Auto-computes normLabel when empty in CSV');
+  assert(records[2].normLabel === 'operating expenses opex', 'Enforces normalisation on incoming un-normalised normalized_label');
   assert(records[0].rowIndex === undefined, 'History record does not have rowIndex');
   assert(records[1].rowIndex === undefined, 'History record does not have rowIndex');
 }

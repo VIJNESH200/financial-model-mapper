@@ -37,7 +37,7 @@ function findHistoryLabelMatches(row, history, useSheetContext, templateId = nul
   const matches = history.filter(record => {
     if (targetTemplate) {
       const recordTemplate = (record.templateId || '').trim();
-      if (recordTemplate !== targetTemplate) {
+      if (recordTemplate.toLowerCase() !== targetTemplate.toLowerCase()) {
         return false;
       }
     }
